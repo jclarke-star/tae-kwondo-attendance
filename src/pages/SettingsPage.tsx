@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { PlayfulButton } from '@/components/ui/PlayfulButton';
 import { PlayfulCard } from '@/components/ui/PlayfulCard';
@@ -7,7 +7,7 @@ import { api } from '@/lib/api-client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, User, Shield, Smile, ChevronRight } from 'lucide-react';
-const EMOJIS = ['🥋', '🐯', '🦈', '🐉', '🐼', '🦅', '🦁', '🔥', '⚡️', '🌟'];
+const EMOJIS = ['🥋', '🐯', '🦈', '🐉', '🐼', ' eagles', '🦁', '🔥', '⚡️', '🌟'];
 export function SettingsPage() {
   const currentUser = useAppStore(s => s.currentUser);
   const userRole = useAppStore(s => s.userRole);
@@ -18,17 +18,22 @@ export function SettingsPage() {
   const [belt, setBelt] = useState(BELT_ORDER[0]);
   const [avatar, setAvatar] = useState('🥋');
   const [saving, setSaving] = useState(false);
+  const hasInitialized = useRef(false);
   useEffect(() => {
     if (!userRole) {
       navigate('/');
+      return;
     }
-    if (currentUser) {
+    // Only initialize form fields once from store to prevent background updates from overwriting typing
+    if (currentUser && !hasInitialized.current) {
       setName(currentUser.name);
       setBelt(currentUser.belt);
       setAvatar(currentUser.avatar);
+      hasInitialized.current = true;
     }
   }, [currentUser, userRole, navigate]);
   const handleSave = async () => {
+    if (saving) return;
     if (!name.trim()) {
       toast.error("Enter your name, warrior!");
       return;

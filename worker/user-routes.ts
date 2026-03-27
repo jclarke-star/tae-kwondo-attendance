@@ -32,31 +32,37 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const sessionId = c.req.param('id');
     const session = new ClassSessionEntity(c.env, sessionId);
     if (!await session.exists()) return notFound(c, 'class not found');
+    // Idempotency check: Get current state before approving
+    const currentState = await session.getState();
+    const isAlreadyConfirmed = currentState.confirmedCheckIns.includes(userId);
     const updatedSession = await session.approveCheckIn(userId);
-    const userEnt = new UserEntity(c.env, userId);
-    if (await userEnt.exists()) {
-      await userEnt.mutate(u => {
-        const nextTotal = (u.totalSessions ?? 0) + 1;
-        const nextStreak = (u.streak ?? 0) + 1;
-        const currentBadges = u.badges ?? [];
-        const newBadges = [...currentBadges];
-        // Award Attendance Pro at 5 sessions
-        if (nextTotal === 5 && !newBadges.some((b: Badge) => b.id === 'b3')) {
-          const badge = MOCK_BADGES.find((b: Badge) => b.id === 'b3');
-          if (badge) newBadges.push(badge);
-        }
-        // Award Power Kicker at 10 sessions
-        if (nextTotal === 10 && !newBadges.some((b: Badge) => b.id === 'b2')) {
-          const badge = MOCK_BADGES.find((b: Badge) => b.id === 'b2');
-          if (badge) newBadges.push(badge);
-        }
-        return { 
-          ...u, 
-          totalSessions: nextTotal, 
-          streak: nextStreak, 
-          badges: newBadges 
-        };
-      });
+    // Only update user stats if they weren't already confirmed in this specific session
+    if (!isAlreadyConfirmed) {
+      const userEnt = new UserEntity(c.env, userId);
+      if (await userEnt.exists()) {
+        await userEnt.mutate(u => {
+          const nextTotal = (u.totalSessions ?? 0) + 1;
+          const nextStreak = (u.streak ?? 0) + 1;
+          const currentBadges = u.badges ?? [];
+          const newBadges = [...currentBadges];
+          // Award Attendance Pro at 5 sessions
+          if (nextTotal === 5 && !newBadges.some((b: Badge) => b.id === 'b3')) {
+            const badge = MOCK_BADGES.find((b: Badge) => b.id === 'b3');
+            if (badge) newBadges.push(badge);
+          }
+          // Award Power Kicker at 10 sessions
+          if (nextTotal === 10 && !newBadges.some((b: Badge) => b.id === 'b2')) {
+            const badge = MOCK_BADGES.find((b: Badge) => b.id === 'b2');
+            if (badge) newBadges.push(badge);
+          }
+          return {
+            ...u,
+            totalSessions: nextTotal,
+            streak: nextStreak,
+            badges: newBadges
+          };
+        });
+      }
     }
     return ok(c, updatedSession);
   });

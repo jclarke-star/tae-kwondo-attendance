@@ -8,14 +8,17 @@ interface BeltProgressProps {
   totalSessions: number;
 }
 export function BeltProgress({ currentBelt, totalSessions = 0 }: BeltProgressProps) {
+  const sessionsCount = Number(totalSessions || 0);
   // Safe lookup for current index
   const currentIndex = BELT_ORDER.findIndex(b => b.toLowerCase() === currentBelt.toLowerCase());
-  const nextBelt = currentIndex !== -1 && currentIndex < BELT_ORDER.length - 1
+  const isLastBelt = currentIndex === BELT_ORDER.length - 1;
+  const nextBelt = !isLastBelt && currentIndex !== -1
     ? BELT_ORDER[currentIndex + 1]
     : "Master Level";
   // Logic: Every 10 sessions is a "milestone" towards the next belt
-  const isMaster = nextBelt === "Master Level";
-  const progressToNext = isMaster ? 100 : (totalSessions % 10) * 10;
+  const isMaster = isLastBelt || nextBelt === "Master Level";
+  // For master, fill is 100%. For others, 0-100% based on sessions within current 10-block
+  const progressToNext = isMaster ? 100 : (sessionsCount % 10) * 10;
   const getBeltColor = (beltName: string) => {
     if (beltName.includes('White')) return 'bg-white';
     if (beltName.includes('Yellow')) return 'bg-kidYellow';
@@ -49,7 +52,7 @@ export function BeltProgress({ currentBelt, totalSessions = 0 }: BeltProgressPro
         <div className="absolute inset-0 flex items-center justify-around px-4 pointer-events-none">
           <div className={cn("w-12 h-4 border-2 border-black rounded-sm shadow-sm", getBeltColor(currentBelt))} />
           <div className="flex-1 mx-4 h-[2px] bg-black/10" />
-          <div className={cn("w-12 h-4 border-2 border-black rounded-sm opacity-40", getBeltColor(isMaster ? currentBelt : nextBelt))} />
+          <div className={cn("w-12 h-4 border-2 border-black rounded-sm opacity-40", getBeltColor(isLastBelt ? currentBelt : nextBelt))} />
         </div>
       </div>
       <div className="flex items-center justify-between bg-white border-2 border-black rounded-xl p-3 shadow-playful-sm">
@@ -61,11 +64,11 @@ export function BeltProgress({ currentBelt, totalSessions = 0 }: BeltProgressPro
             {isMaster ? (
               <>
                 <p className="text-xs font-black uppercase">Legend Status Achieved</p>
-                <p className="text-[10px] font-bold text-muted-foreground">Keep training to maintain your streak!</p>
+                <p className="text-[10px] font-bold text-muted-foreground">Highest rank reached. Keep it up!</p>
               </>
             ) : (
               <>
-                <p className="text-xs font-black uppercase">{10 - (totalSessions % 10)} MORE CLASSES</p>
+                <p className="text-xs font-black uppercase">{10 - (sessionsCount % 10)} MORE CLASSES</p>
                 <p className="text-[10px] font-bold text-muted-foreground">Until you qualify for {nextBelt} test!</p>
               </>
             )}
@@ -73,7 +76,9 @@ export function BeltProgress({ currentBelt, totalSessions = 0 }: BeltProgressPro
         </div>
         <div className="flex -space-x-2">
           {[1, 2, 3].map((i) => {
-            const isActive = isMaster || i <= (totalSessions % 10) / 3;
+            // Milestone stars: 1st at 3/10, 2nd at 6/10, 3rd at 9/10
+            const threshold = i * 3.3;
+            const isActive = isMaster || (sessionsCount % 10) >= threshold;
             return (
               <div key={i} className={cn(
                 "w-6 h-6 rounded-full border-2 border-black flex items-center justify-center transition-colors",

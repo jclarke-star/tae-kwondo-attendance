@@ -7,7 +7,7 @@ import { BadgeGallery } from '@/components/BadgeGallery';
 import { Celebration } from '@/components/ui/Celebration';
 import { api } from '@/lib/api-client';
 import { ClassSession, GradingEvent } from '@shared/types';
-import { Loader2, CheckCircle2, Hourglass, Trophy, Star, Flame } from 'lucide-react';
+import { Loader2, CheckCircle2, Hourglass, Trophy, Star, Flame, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 export function StudentDashboard() {
@@ -30,10 +30,14 @@ export function StudentDashboard() {
       setGradings(gradingData);
       if (updatedUser) {
         const activeClass = classData[0];
-        const currentStatus = activeClass?.confirmedCheckIns.includes(updatedUser.id) ? 'confirmed' : 'pending';
+        const isConfirmed = activeClass?.confirmedCheckIns.includes(updatedUser.id);
+        const isPending = activeClass?.pendingCheckIns.includes(updatedUser.id);
+        const currentStatus = isConfirmed ? 'confirmed' : isPending ? 'pending' : 'none';
+        // Only trigger celebration if transitioning from pending to confirmed
         if (prevStatusRef.current === 'pending' && currentStatus === 'confirmed') {
           setShowCelebration(true);
         }
+        // Initialize or update status reference
         prevStatusRef.current = currentStatus;
       }
     } catch (e) {
@@ -92,8 +96,12 @@ export function StudentDashboard() {
         </div>
       </PlayfulCard>
       {!activeClass ? (
-        <PlayfulCard color="bg-kidBlue/5" className="border-kidBlue/20">
-          <p className="text-center font-black italic">No active training sessions. Rest up, warrior!</p>
+        <PlayfulCard color="bg-kidBlue/5" className="border-kidBlue/20 text-center space-y-4 py-12">
+          <Sparkles className="w-12 h-12 mx-auto text-kidBlue opacity-40" />
+          <div className="space-y-1">
+            <p className="font-black text-xl italic uppercase">No class right now!</p>
+            <p className="font-bold text-muted-foreground uppercase text-xs">Rest up, mighty warrior. Next session soon!</p>
+          </div>
         </PlayfulCard>
       ) : (
         <div className="space-y-4">
@@ -109,12 +117,12 @@ export function StudentDashboard() {
               <div className="text-3xl">🥋</div>
             </div>
             {activeClass.confirmedCheckIns.includes(currentUser?.id || '') ? (
-              <div className="bg-kidGreen p-6 rounded-2xl border-4 border-black text-white text-center space-y-2 animate-in zoom-in duration-500">
+              <div className="bg-kidGreen p-6 rounded-2xl border-4 border-black text-white text-center space-y-2 animate-in zoom-in duration-500 shadow-playful-sm">
                 <CheckCircle2 className="w-12 h-12 mx-auto" />
                 <p className="text-2xl font-black italic uppercase">ON THE MAT!</p>
               </div>
             ) : activeClass.pendingCheckIns.includes(currentUser?.id || '') ? (
-              <div className="bg-kidYellow p-6 rounded-2xl border-4 border-black text-black text-center space-y-2 animate-pulse">
+              <div className="bg-kidYellow p-6 rounded-2xl border-4 border-black text-black text-center space-y-2 animate-pulse shadow-playful-sm">
                 <Hourglass className="w-12 h-12 mx-auto" />
                 <p className="text-xl font-black uppercase italic">Master is Approving...</p>
               </div>
