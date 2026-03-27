@@ -19,6 +19,7 @@ export function StudentDashboard() {
   const [showCelebration, setShowCelebration] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
   const fetchData = useCallback(async () => {
+    if (!currentUser?.id) return;
     try {
       const [classData, gradingData, userData] = await Promise.all([
         api<ClassSession[]>('/api/classes'),
@@ -27,10 +28,8 @@ export function StudentDashboard() {
       ]);
       setClasses(classData);
       setGradings(gradingData);
-      // Sync local user state with server for gamification updates
-      const updatedMe = userData.find(u => u.id === currentUser?.id);
+      const updatedMe = userData.find(u => u.id === currentUser.id);
       if (updatedMe) {
-        // Trigger celebration if we just got confirmed!
         const activeClass = classData[0];
         const currentStatus = activeClass?.confirmedCheckIns.includes(updatedMe.id) ? 'confirmed' : 'pending';
         if (prevStatusRef.current === 'pending' && currentStatus === 'confirmed') {
@@ -47,7 +46,7 @@ export function StudentDashboard() {
   }, [currentUser?.id, setCurrentUser]);
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5000); // Polling for approval
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [fetchData]);
   const handleCheckIn = async (classId: string) => {
@@ -67,7 +66,7 @@ export function StudentDashboard() {
   if (loading && !currentUser) return (
     <div className="flex flex-col items-center justify-center h-64">
       <Loader2 className="w-12 h-12 animate-spin text-kidBlue" />
-      <p className="mt-4 font-black">GETTING READY...</p>
+      <p className="mt-4 font-black uppercase tracking-widest">Getting Ready...</p>
     </div>
   );
   const activeClass = classes[0];
@@ -86,8 +85,8 @@ export function StudentDashboard() {
           <span className="font-black text-sm">{currentUser?.streak || 0}</span>
         </div>
         <div className="text-7xl mb-2 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">{currentUser?.avatar}</div>
-        <h2 className="text-4xl font-black tracking-tight">{currentUser?.name}</h2>
-        <div className="mt-4 mb-6">
+        <h2 className="text-3xl font-black tracking-tight uppercase">{currentUser?.name}</h2>
+        <div className="mt-4 mb-2">
           <BeltProgress
             currentBelt={currentUser?.belt || "White Belt"}
             totalSessions={currentUser?.totalSessions || 0}
@@ -96,30 +95,30 @@ export function StudentDashboard() {
       </PlayfulCard>
       {!activeClass ? (
         <PlayfulCard color="bg-kidYellow/20">
-          <p className="text-center font-black">No classes right now. Rest up!</p>
+          <p className="text-center font-black">No active training sessions. Rest up!</p>
         </PlayfulCard>
       ) : (
         <div className="space-y-4">
           <h3 className="text-2xl font-black px-2 flex items-center gap-2">
-            <Star className="w-6 h-6 text-kidYellow" /> TODAY'S ACTION
+            <Star className="w-6 h-6 text-kidYellow" /> TRAINING TODAY
           </h3>
           <PlayfulCard className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <p className="text-xl font-black">{activeClass.title}</p>
-                <p className="font-bold text-kidBlue">Time to train!</p>
+                <p className="font-bold text-kidBlue">Ready for class?</p>
               </div>
               <div className="text-3xl">🥋</div>
             </div>
             {activeClass.confirmedCheckIns.includes(currentUser?.id || '') ? (
-              <div className="bg-kidGreen p-6 rounded-2xl border-4 border-black text-white text-center space-y-2">
+              <div className="bg-kidGreen p-6 rounded-2xl border-4 border-black text-white text-center space-y-2 animate-in zoom-in duration-500">
                 <CheckCircle2 className="w-12 h-12 mx-auto" />
-                <p className="text-2xl font-black italic">YOU ARE CONFIRMED!</p>
+                <p className="text-2xl font-black italic">ON THE MAT!</p>
               </div>
             ) : activeClass.pendingCheckIns.includes(currentUser?.id || '') ? (
               <div className="bg-kidYellow p-6 rounded-2xl border-4 border-black text-black text-center space-y-2 animate-pulse">
                 <Hourglass className="w-12 h-12 mx-auto" />
-                <p className="text-xl font-black">WAITING FOR MASTER...</p>
+                <p className="text-xl font-black uppercase">Waiting for Approval</p>
               </div>
             ) : (
               <PlayfulButton
@@ -128,7 +127,7 @@ export function StudentDashboard() {
                 className="w-full py-10"
                 onClick={() => handleCheckIn(activeClass.id)}
               >
-                CHECK IN
+                CHECK IN NOW
               </PlayfulButton>
             )}
           </PlayfulCard>
@@ -136,14 +135,14 @@ export function StudentDashboard() {
       )}
       <div className="space-y-4">
         <h3 className="text-2xl font-black px-2 flex items-center gap-2">
-          <Trophy className="w-6 h-6 text-kidYellow" /> MY BADGES
+          <Trophy className="w-6 h-6 text-kidYellow" /> MY ACHIEVEMENTS
         </h3>
         <BadgeGallery badges={currentUser?.badges || []} />
       </div>
       {myGradings.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-2xl font-black px-2 flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-kidBlue" /> NEXT BELT TEST
+            <Trophy className="w-6 h-6 text-kidBlue" /> UPCOMING GRADING
           </h3>
           {myGradings.map(g => (
             <PlayfulCard key={g.id} color="bg-white" className="border-black">

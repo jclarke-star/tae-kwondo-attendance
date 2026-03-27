@@ -25,17 +25,16 @@ export function InstructorDashboard() {
       setUsers(userData);
       const pendingCount = currentSession?.pendingCheckIns.length || 0;
       if (pendingCount > prevPendingCount.current) {
-        toast.info("NEW CHECK-IN!", {
+        toast.info("NEW STUDENT WAITING", {
           icon: <BellRing className="w-4 h-4 text-kidRed" />,
-          description: "A student is waiting for approval."
+          description: "Check the attendance list for approvals."
         });
-        // Play subtle sound if browser permits
         try {
           const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
           audio.volume = 0.3;
           audio.play();
         } catch (e) {
-          /* browsers block autoplay without interaction */
+          // ignore autoplay blocks
         }
       }
       prevPendingCount.current = pendingCount;
@@ -47,7 +46,7 @@ export function InstructorDashboard() {
   }, []);
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 3000); // Fast poll for instructors
+    const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, [fetchData]);
   const handleAction = useCallback(async (userId: string, action: 'approve' | 'deny') => {
@@ -57,13 +56,13 @@ export function InstructorDashboard() {
         method: 'POST',
         body: JSON.stringify({ userId })
       });
-      toast.success(action === 'approve' ? 'Approved!' : 'Denied');
+      toast.success(action === 'approve' ? 'Student Approved!' : 'Check-in Denied');
       fetchData();
     } catch (e) {
-      toast.error('Action failed');
+      toast.error('Operation failed');
     }
   }, [session, fetchData]);
-  if (loading && !session) return <div className="p-8 text-center font-black">LOADING COMMAND CENTER...</div>;
+  if (loading && !session) return <div className="p-8 text-center font-black italic">Opening Command Center...</div>;
   const pendingUsers = users.filter(u => session?.pendingCheckIns.includes(u.id));
   const confirmedUsers = users.filter(u => session?.confirmedCheckIns.includes(u.id));
   return (
@@ -73,8 +72,8 @@ export function InstructorDashboard() {
           <ShieldCheck className="w-8 h-8" />
         </div>
         <div>
-          <h2 className="text-2xl font-black">COMMAND CENTER</h2>
-          <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-widest">Master Lee's Station</p>
+          <h2 className="text-2xl font-black leading-tight uppercase">Master Station</h2>
+          <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-widest">Tae Kwon-Do Attendance</p>
         </div>
       </div>
       <Tabs defaultValue="attendance" className="w-full">
@@ -86,7 +85,7 @@ export function InstructorDashboard() {
               pendingUsers.length > 0 && "data-[state=inactive]:animate-bounce-subtle"
             )}
           >
-            <ClipboardList className="w-4 h-4 mr-2" /> 
+            <ClipboardList className="w-4 h-4 mr-2" />
             ATTENDANCE
             {pendingUsers.length > 0 && (
               <span className="absolute -top-2 -right-2 bg-kidRed text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-black animate-in zoom-in duration-300">
@@ -104,7 +103,7 @@ export function InstructorDashboard() {
         <TabsContent value="attendance" className="space-y-6 mt-6">
           <div className="space-y-4">
             <h3 className="text-xl font-black px-2 flex items-center gap-2">
-              <Hourglass className="w-5 h-5 text-kidYellow" /> WAITING ({pendingUsers.length})
+              <Hourglass className="w-5 h-5 text-kidYellow" /> PENDING ({pendingUsers.length})
             </h3>
             {pendingUsers.length === 0 ? (
               <div className="px-4 py-16 text-center border-4 border-dashed border-black/10 rounded-[40px] bg-slate-50">
@@ -112,11 +111,11 @@ export function InstructorDashboard() {
               </div>
             ) : (
               pendingUsers.map(u => (
-                <PlayfulCard key={u.id} className="flex items-center justify-between p-4 group">
+                <PlayfulCard key={u.id} className="flex items-center justify-between p-4 hover:translate-x-1 transition-transform">
                   <div className="flex items-center gap-3">
                     <span className="text-3xl drop-shadow-sm">{u.avatar}</span>
                     <div>
-                      <p className="font-black leading-tight text-lg">{u.name}</p>
+                      <p className="font-black leading-tight text-lg uppercase">{u.name}</p>
                       <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">{u.belt}</p>
                     </div>
                   </div>
@@ -138,9 +137,9 @@ export function InstructorDashboard() {
             </h3>
             <div className="grid grid-cols-2 gap-3">
               {confirmedUsers.map(u => (
-                <div key={u.id} className="bg-white border-2 border-black rounded-2xl p-3 flex flex-col items-center text-center shadow-playful-sm">
+                <div key={u.id} className="bg-white border-2 border-black rounded-2xl p-3 flex flex-col items-center text-center shadow-playful-sm animate-in zoom-in duration-300">
                   <span className="text-4xl mb-1">{u.avatar}</span>
-                  <p className="font-black text-[12px] truncate w-full">{u.name}</p>
+                  <p className="font-black text-[12px] truncate w-full uppercase">{u.name}</p>
                   <div className="mt-1 bg-kidGreen/20 text-kidGreen border border-kidGreen/30 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
                     ACTIVE
                   </div>
