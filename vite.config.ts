@@ -111,7 +111,7 @@ export default ({ mode }: { mode: string }) => {
       sourcemap: "inline", // Use inline source maps for better error reporting
       rollupOptions: {
         output: {
-          sourcemapExcludeSources: false, // Include original source in source maps
+          sourcemapExcludeSources: true, // Include original source in source maps
         },
       },
     },
