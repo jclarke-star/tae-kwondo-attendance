@@ -1,181 +1,89 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { PlayfulButton } from '@/components/ui/PlayfulButton';
 import { PlayfulCard } from '@/components/ui/PlayfulCard';
-import { BeltProgress } from '@/components/ui/BeltProgress';
-import { BadgeGallery } from '@/components/BadgeGallery';
-import { Celebration } from '@/components/ui/Celebration';
 import { api } from '@/lib/api-client';
-import { ClassSession, GradingEvent } from '@shared/types';
-import { Loader2, CheckCircle2, Hourglass, Trophy, Star, Flame, Sparkles } from 'lucide-react';
+import { ClassSession } from '@shared/types';
+import { Loader2, CheckCircle2, Hourglass } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 export function StudentDashboard() {
-  const currentUser = useAppStore(s => s.currentUser);
-  const refreshUser = useAppStore(s => s.refreshUser);
+  const user = useAppStore(s => s.currentUser);
   const [classes, setClasses] = useState<ClassSession[]>([]);
-  const [gradings, setGradings] = useState<GradingEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [celebration, setCelebration] = useState<{ active: boolean; text: string; sub?: string }>({ active: false, text: "" });
-  const prevStatusRef = useRef<string | null>(null);
-  const prevBeltRef = useRef<string | null>(currentUser?.belt || null);
-  const initialLoadDone = useRef(false);
-  const fetchData = useCallback(async () => {
-    if (!currentUser?.id) return;
+  const fetchClasses = async () => {
     try {
-      const [classData, gradingData, updatedUser] = await Promise.all([
-        api<ClassSession[]>('/api/classes'),
-        api<GradingEvent[]>('/api/gradings'),
-        refreshUser()
-      ]);
-      setClasses(classData);
-      setGradings(gradingData);
-      if (updatedUser) {
-        // Attendance Celebration
-        const activeClass = classData[0];
-        const isConfirmed = activeClass?.confirmedCheckIns.includes(updatedUser.id);
-        const isPending = activeClass?.pendingCheckIns.includes(updatedUser.id);
-        const currentStatus = isConfirmed ? 'confirmed' : isPending ? 'pending' : 'none';
-        if (initialLoadDone.current && prevStatusRef.current === 'pending' && currentStatus === 'confirmed') {
-          setCelebration({ active: true, text: "KI-YAH! CONFIRMED!" });
-        }
-        // Rank Up Celebration
-        if (initialLoadDone.current && prevBeltRef.current && prevBeltRef.current !== updatedUser.belt) {
-          setCelebration({ 
-            active: true, 
-            text: "LEVEL UP!", 
-            sub: `You are now a ${updatedUser.belt}!` 
-          });
-          toast.success("CONGRATULATIONS ON YOUR PROMOTION!", { duration: 6000 });
-        }
-        prevStatusRef.current = currentStatus;
-        prevBeltRef.current = updatedUser.belt;
-        initialLoadDone.current = true;
-      }
+      const data = await api<ClassSession[]>('/api/classes');
+      setClasses(data);
     } catch (e) {
-      console.error('Polling error', e);
+      console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.id, refreshUser]);
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  };
+  useEffect(() => { fetchClasses(); }, []);
   const handleCheckIn = async (classId: string) => {
-    if (!currentUser) return;
+    if (!user) return;
     try {
       await api(`/api/classes/${classId}/checkin`, {
         method: 'POST',
-        body: JSON.stringify({ userId: currentUser.id })
+        body: JSON.stringify({ userId: user.id })
       });
       toast.success('KI-YAH! Check-in sent!');
-      prevStatusRef.current = 'pending';
-      fetchData();
+      fetchClasses();
     } catch (e) {
       toast.error('Failed to check in');
     }
   };
-  if (loading && !currentUser) return (
-    <div className="flex flex-col items-center justify-center py-20">
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center h-64">
       <Loader2 className="w-12 h-12 animate-spin text-kidBlue" />
-      <p className="mt-4 font-black uppercase tracking-widest italic">Getting Ready...</p>
+      <p className="mt-4 font-black">GETTING READY...</p>
     </div>
   );
   const activeClass = classes[0];
-  const myGradings = gradings.filter(g => g.targetBelts.includes(currentUser?.belt || ''));
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 py-4">
-      {celebration.active && (
-        <Celebration
-          text={celebration.text}
-          subtext={celebration.sub}
-          onComplete={() => setCelebration({ active: false, text: "" })}
-        />
-      )}
-      <PlayfulCard className="text-center relative overflow-hidden pt-12 border-kidBlue shadow-playful-lg">
-        <div className="absolute top-4 right-4 flex items-center gap-1 bg-kidRed text-white px-3 py-1 rounded-full border-2 border-black rotate-3 shadow-playful-sm">
-          <Flame className="w-4 h-4 fill-white" />
-          <span className="font-black text-sm">{currentUser?.streak || 0}</span>
-        </div>
-        <div className="text-7xl mb-2 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">{currentUser?.avatar}</div>
-        <h2 className="text-3xl font-black tracking-tight uppercase italic">{currentUser?.name}</h2>
-        <div className="mt-6">
-          <BeltProgress
-            currentBelt={currentUser?.belt || "White Belt"}
-            totalSessions={currentUser?.totalSessions || 0}
-          />
-        </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <PlayfulCard className="text-center">
+        <div className="text-6xl mb-2">{user?.avatar}</div>
+        <h2 className="text-3xl font-black">{user?.name}</h2>
+        <p className="font-bold text-muted-foreground">{user?.belt}</p>
       </PlayfulCard>
       {!activeClass ? (
-        <PlayfulCard color="bg-kidBlue/5" className="border-kidBlue/20 text-center space-y-4 py-12">
-          <Sparkles className="w-12 h-12 mx-auto text-kidBlue opacity-40" />
-          <div className="space-y-1">
-            <p className="font-black text-xl italic uppercase">No class right now!</p>
-            <p className="font-bold text-muted-foreground uppercase text-xs">Next session soon!</p>
-          </div>
+        <PlayfulCard color="bg-kidYellow/20">
+          <p className="text-center font-black">No classes right now. Rest up!</p>
         </PlayfulCard>
       ) : (
         <div className="space-y-4">
-          <h3 className="text-2xl font-black px-2 flex items-center gap-2 italic uppercase">
-            <Star className="w-6 h-6 text-kidYellow" /> TRAINING TODAY
-          </h3>
-          <PlayfulCard className="space-y-6 min-h-[160px] flex flex-col justify-center border-kidBlue">
+          <h3 className="text-2xl font-black px-2">TODAY'S CLASS</h3>
+          <PlayfulCard className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <p className="text-xl font-black uppercase">{activeClass.title}</p>
-                <p className="font-bold text-kidBlue italic">Ready to kick?</p>
+                <p className="text-xl font-black">{activeClass.title}</p>
+                <p className="font-bold text-kidBlue">Starts Soon!</p>
               </div>
               <div className="text-3xl">🥋</div>
             </div>
-            {activeClass.confirmedCheckIns.includes(currentUser?.id || '') ? (
-              <div className="bg-kidGreen p-6 rounded-2xl border-4 border-black text-white text-center space-y-2 animate-in zoom-in duration-500 shadow-playful-sm">
+            {activeClass.confirmedCheckIns.includes(user?.id || '') ? (
+              <div className="bg-kidGreen p-6 rounded-2xl border-4 border-black text-white text-center space-y-2">
                 <CheckCircle2 className="w-12 h-12 mx-auto" />
-                <p className="text-2xl font-black italic uppercase">ON THE MAT!</p>
+                <p className="text-2xl font-black italic">CONFIRMED! KI-YAH!</p>
               </div>
-            ) : activeClass.pendingCheckIns.includes(currentUser?.id || '') ? (
-              <div className="bg-kidYellow p-6 rounded-2xl border-4 border-black text-black text-center space-y-2 animate-pulse shadow-playful-sm">
+            ) : activeClass.pendingCheckIns.includes(user?.id || '') ? (
+              <div className="bg-kidYellow p-6 rounded-2xl border-4 border-black text-black text-center space-y-2 animate-pulse">
                 <Hourglass className="w-12 h-12 mx-auto" />
-                <p className="text-xl font-black uppercase italic">Master is Approving...</p>
+                <p className="text-xl font-black">WAITING FOR MASTER...</p>
               </div>
             ) : (
-              <PlayfulButton
-                variant="blue"
-                size="xl"
+              <PlayfulButton 
+                variant="red" 
+                size="xl" 
                 className="w-full py-10"
                 onClick={() => handleCheckIn(activeClass.id)}
               >
-                KI-YAH! CHECK IN
+                CHECK IN
               </PlayfulButton>
             )}
           </PlayfulCard>
-        </div>
-      )}
-      <div className="space-y-4">
-        <h3 className="text-2xl font-black px-2 flex items-center gap-2 italic uppercase">
-          <Trophy className="w-6 h-6 text-kidYellow" /> ACHIEVEMENTS
-        </h3>
-        <BadgeGallery badges={currentUser?.badges || []} />
-      </div>
-      {myGradings.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-2xl font-black px-2 flex items-center gap-2 italic uppercase">
-            <Star className="w-6 h-6 text-kidBlue" /> NEXT GRADING
-          </h3>
-          {myGradings.map(g => (
-            <PlayfulCard key={g.id} color="bg-white" className="border-kidBlue">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-lg font-black uppercase italic">{g.title}</p>
-                  <p className="text-sm font-bold text-muted-foreground uppercase">{format(new Date(g.date), 'EEEE, MMMM do')}</p>
-                </div>
-                <div className="bg-kidYellow p-3 rounded-full border-4 border-black shadow-playful-sm">
-                  <Trophy className="w-6 h-6 text-black" />
-                </div>
-              </div>
-            </PlayfulCard>
-          ))}
         </div>
       )}
     </div>

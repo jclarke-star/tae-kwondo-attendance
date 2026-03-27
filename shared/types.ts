@@ -3,22 +3,19 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
 }
-
-// Minimal real-world chat example types (shared by frontend and worker)
+export type UserRole = 'student' | 'instructor';
 export interface User {
   id: string;
   name: string;
+  role: UserRole;
+  belt: string;
+  avatar: string;
 }
-
-export interface Chat {
+export interface ClassSession {
   id: string;
   title: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  chatId: string;
-  userId: string;
-  text: string;
-  ts: number; // epoch millis
+  date: string; // ISO string
+  instructorId: string;
+  pendingCheckIns: string[]; // User IDs
+  confirmedCheckIns: string[]; // User IDs
 }

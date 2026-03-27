@@ -1,15 +1,34 @@
-import type { User, Chat, ChatMessage } from './types';
-
+import type { User, ClassSession } from './types';
 export const MOCK_USERS: User[] = [
-  { id: 'u1', name: 'User A' },
-  { id: 'u2', name: 'User B' }
+  { 
+    id: 'u-instructor', 
+    name: 'Master Lee', 
+    role: 'instructor', 
+    belt: 'Black Belt (9th Dan)', 
+    avatar: '🥋' 
+  },
+  { 
+    id: 'u-timmy', 
+    name: 'Timmy Tiger', 
+    role: 'student', 
+    belt: 'Yellow Belt', 
+    avatar: '🐯' 
+  },
+  { 
+    id: 'u-sarah', 
+    name: 'Sarah Shark', 
+    role: 'student', 
+    belt: 'Green Belt', 
+    avatar: '🦈' 
+  }
 ];
-
-export const MOCK_CHATS: Chat[] = [
-  { id: 'c1', title: 'General' },
+export const MOCK_CLASSES: ClassSession[] = [
+  {
+    id: 'c-today',
+    title: 'Afternoon Kickers',
+    date: new Date().toISOString(),
+    instructorId: 'u-instructor',
+    pendingCheckIns: [],
+    confirmedCheckIns: []
+  }
 ];
-
-export const MOCK_CHAT_MESSAGES: ChatMessage[] = [
-  { id: 'm1', chatId: 'c1', userId: 'u1', text: 'Hello', ts: Date.now() },
-];
-  
