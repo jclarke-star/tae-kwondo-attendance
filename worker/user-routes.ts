@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { UserEntity, ClassSessionEntity, GradingEventEntity } from "./entities";
 import { ok, bad, notFound } from './core-utils';
+import { MOCK_BADGES } from "@shared/mock-data";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // SEED ON START
   app.get('/api/init', async (c) => {
@@ -27,10 +28,37 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.post('/api/classes/:id/approve', async (c) => {
     const { userId } = await c.req.json();
     if (!userId) return bad(c, 'userId required');
-    const session = new ClassSessionEntity(c.env, c.req.param('id'));
+    const sessionId = c.req.param('id');
+    const session = new ClassSessionEntity(c.env, sessionId);
     if (!await session.exists()) return notFound(c, 'class not found');
-    const updated = await session.approveCheckIn(userId);
-    return ok(c, updated);
+    // 1. Approve in class session
+    const updatedSession = await session.approveCheckIn(userId);
+    // 2. Update User Stats (Gamification)
+    const userEnt = new UserEntity(c.env, userId);
+    if (await userEnt.exists()) {
+      await userEnt.mutate(u => {
+        const nextTotal = (u.totalSessions || 0) + 1;
+        const nextStreak = (u.streak || 0) + 1;
+        const newBadges = [...(u.badges || [])];
+        // Milestone: Attendance Pro (5 sessions)
+        if (nextTotal === 5 && !newBadges.find(b => b.id === 'b3')) {
+          const badge = MOCK_BADGES.find(b => b.id === 'b3');
+          if (badge) newBadges.push(badge);
+        }
+        // Milestone: Power Kicker (10 sessions)
+        if (nextTotal === 10 && !newBadges.find(b => b.id === 'b2')) {
+          const badge = MOCK_BADGES.find(b => b.id === 'b2');
+          if (badge) newBadges.push(badge);
+        }
+        return {
+          ...u,
+          totalSessions: nextTotal,
+          streak: nextStreak,
+          badges: newBadges
+        };
+      });
+    }
+    return ok(c, updatedSession);
   });
   app.post('/api/classes/:id/deny', async (c) => {
     const { userId } = await c.req.json();

@@ -36,8 +36,8 @@ export const MOCK_USERS: User[] = [
     role: 'student',
     belt: 'White Belt',
     avatar: '🐯',
-    totalSessions: 12,
-    streak: 3,
+    totalSessions: 9, // One session away from "Power Kicker"
+    streak: 4, // One session away from "Attendance Pro"
     badges: [MOCK_BADGES[0]]
   },
   {
@@ -47,7 +47,7 @@ export const MOCK_USERS: User[] = [
     belt: 'Yellow Belt',
     avatar: '🦈',
     totalSessions: 25,
-    streak: 5,
+    streak: 12,
     badges: [MOCK_BADGES[0], MOCK_BADGES[2]]
   }
 ];

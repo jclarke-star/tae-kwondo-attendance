@@ -2,65 +2,51 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 interface CelebrationProps {
   text: string;
-  subtext?: string;
   onComplete: () => void;
 }
-export function Celebration({ text, subtext, onComplete }: CelebrationProps) {
+export function Celebration({ text, onComplete }: CelebrationProps) {
   useEffect(() => {
-    const timer = setTimeout(onComplete, 3500);
+    const timer = setTimeout(onComplete, 3000);
     return () => clearTimeout(timer);
   }, [onComplete]);
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
+        {/* Background Overlay */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-white/40 backdrop-blur-md"
+          className="absolute inset-0 bg-white/40 backdrop-blur-sm"
         />
-        {[...Array(20)].map((_, i) => (
+        {/* Geometric Shapes */}
+        {[...Array(12)].map((_, i) => (
           <motion.div
             key={i}
             initial={{ scale: 0, x: 0, y: 0, rotate: 0 }}
-            animate={{
-              scale: [0, 1.8, 0],
-              x: (Math.random() - 0.5) * 800,
-              y: (Math.random() - 0.5) * 1000,
-              rotate: Math.random() * 720
+            animate={{ 
+              scale: [0, 1.5, 0], 
+              x: (Math.random() - 0.5) * 600, 
+              y: (Math.random() - 0.5) * 800,
+              rotate: Math.random() * 360 
             }}
-            transition={{ duration: 2.5, ease: "easeOut", delay: Math.random() * 0.2 }}
-            className={`absolute w-10 h-10 border-4 border-black rounded-xl ${
-              subtext 
-                ? (i % 2 === 0 ? 'bg-kidYellow shadow-[0_0_20px_rgba(255,204,0,0.5)]' : 'bg-white')
-                : ['bg-kidRed', 'bg-kidBlue', 'bg-kidYellow', 'bg-kidGreen'][i % 4]
+            transition={{ duration: 2, ease: "easeOut" }}
+            className={`absolute w-12 h-12 border-4 border-black rounded-xl ${
+              ['bg-kidRed', 'bg-kidBlue', 'bg-kidYellow', 'bg-kidGreen'][i % 4]
             }`}
           />
         ))}
+        {/* Text */}
         <motion.div
-          initial={{ scale: 0, rotate: -25 }}
-          animate={{ 
-            scale: [0, 1.3, 1], 
-            rotate: [0, -10, 10, -5, 5, 0],
-            y: [0, -20, 0]
-          }}
-          exit={{ scale: 0, opacity: 0, rotate: 45 }}
-          transition={{ type: "spring", stiffness: 400, damping: 12 }}
-          className="relative px-12 py-10 bg-white border-[8px] border-black rounded-[50px] shadow-[15px_15px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center gap-2"
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: [0, 1.2, 1], rotate: [0, -5, 5, 0] }}
+          exit={{ scale: 0, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 15 }}
+          className="relative px-10 py-6 bg-white border-[6px] border-black rounded-[40px] shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]"
         >
-          <h1 className="text-6xl font-black italic tracking-tighter text-black text-center whitespace-nowrap drop-shadow-sm">
+          <h1 className="text-5xl font-black italic tracking-tighter text-black text-center whitespace-nowrap">
             {text}
           </h1>
-          {subtext && (
-            <motion.p 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-xl font-black uppercase italic text-kidRed tracking-tight"
-            >
-              {subtext}
-            </motion.p>
-          )}
         </motion.div>
       </div>
     </AnimatePresence>
