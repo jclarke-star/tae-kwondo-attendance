@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { UserEntity, ClassSessionEntity, GradingEventEntity } from "./entities";
 import { ok, bad, notFound } from './core-utils';
-import { MOCK_BADGES } from "@shared/types";
+import { MOCK_BADGES } from "@shared/mock-data";
+import { Badge } from "@shared/types";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // SEED ON START
   app.get('/api/init', async (c) => {
@@ -38,12 +39,14 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         const nextTotal = (u.totalSessions || 0) + 1;
         const nextStreak = (u.streak || 0) + 1;
         const newBadges = [...(u.badges || [])];
-        if (nextTotal === 5 && !newBadges.find(b => b.id === 'b3')) {
-          const badge = MOCK_BADGES.find(b => b.id === 'b3');
+        // Award Attendance Pro at 5 sessions
+        if (nextTotal === 5 && !newBadges.find((b: Badge) => b.id === 'b3')) {
+          const badge = MOCK_BADGES.find((b: Badge) => b.id === 'b3');
           if (badge) newBadges.push(badge);
         }
-        if (nextTotal === 10 && !newBadges.find(b => b.id === 'b2')) {
-          const badge = MOCK_BADGES.find(b => b.id === 'b2');
+        // Award Power Kicker at 10 sessions
+        if (nextTotal === 10 && !newBadges.find((b: Badge) => b.id === 'b2')) {
+          const badge = MOCK_BADGES.find((b: Badge) => b.id === 'b2');
           if (badge) newBadges.push(badge);
         }
         return { ...u, totalSessions: nextTotal, streak: nextStreak, badges: newBadges };

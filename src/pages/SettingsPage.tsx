@@ -10,33 +10,39 @@ import { ArrowLeft, User, Shield, Smile, ChevronRight } from 'lucide-react';
 const EMOJIS = ['🥋', '🐯', '🦈', '🐉', '🐼', '🦅', '🦁', '🔥', '⚡️', '🌟'];
 export function SettingsPage() {
   const currentUser = useAppStore(s => s.currentUser);
+  const userRole = useAppStore(s => s.userRole);
   const setCurrentUser = useAppStore(s => s.setCurrentUser);
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [belt, setBelt] = useState(BELT_ORDER[0]);
   const [avatar, setAvatar] = useState('🥋');
   const [saving, setSaving] = useState(false);
+  // Instructors shouldn't be here, but we'll let them edit Master profile if needed
+  // Redirect only if someone tries to reach here without any role selected
   useEffect(() => {
+    if (!userRole) {
+      navigate('/');
+    }
     if (currentUser) {
       setName(currentUser.name);
       setBelt(currentUser.belt);
       setAvatar(currentUser.avatar);
     }
-  }, [currentUser]);
+  }, [currentUser, userRole, navigate]);
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error("Please enter your name!");
+      toast.error("Enter your name, warrior!");
       return;
     }
     setSaving(true);
     try {
       const user = await api<UserType>('/api/users/register', {
         method: 'POST',
-        body: JSON.stringify({ 
-          id: currentUser?.id, // Pass ID if it exists to update instead of create
-          name, 
-          belt, 
-          avatar 
+        body: JSON.stringify({
+          id: currentUser?.id,
+          name: name.trim(),
+          belt,
+          avatar
         })
       });
       setCurrentUser(user);
@@ -54,8 +60,8 @@ export function SettingsPage() {
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-xl font-black uppercase tracking-tight">
-          {currentUser ? 'Edit Profile' : 'New Profile'}
+        <h1 className="text-xl font-black uppercase tracking-tight italic">
+          {currentUser ? 'Update Warrior' : 'New Warrior'}
         </h1>
         <div className="w-10" />
       </header>
@@ -67,15 +73,15 @@ export function SettingsPage() {
               <Smile className="w-4 h-4" />
             </div>
           </div>
-          <p className="font-black text-xs text-muted-foreground uppercase tracking-widest">Choose Your Warrior</p>
+          <p className="font-black text-xs text-muted-foreground uppercase tracking-widest italic">Choose Your Avatar</p>
           <div className="flex flex-wrap justify-center gap-2">
             {EMOJIS.map(e => (
               <button
                 key={e}
                 onClick={() => setAvatar(e)}
                 className={`text-2xl p-2 rounded-xl border-2 transition-all active:scale-90 ${
-                  avatar === e 
-                    ? 'bg-kidBlue border-black scale-110 shadow-playful-sm text-white' 
+                  avatar === e
+                    ? 'bg-kidBlue border-black scale-110 shadow-playful-sm text-white'
                     : 'bg-white border-black/10 hover:border-black'
                 }`}
               >
@@ -86,22 +92,22 @@ export function SettingsPage() {
         </div>
         <div className="space-y-6">
           <div className="space-y-2">
-            <label className="flex items-center gap-2 font-black text-sm px-1">
-              <User className="w-4 h-4" /> STUDENT NAME
+            <label className="flex items-center gap-2 font-black text-sm px-1 italic uppercase">
+              <User className="w-4 h-4 text-kidBlue" /> Warrior Name
             </label>
             <input
-              className="w-full p-4 border-4 border-black rounded-2xl font-black text-xl placeholder:text-black/20 focus:outline-none bg-white shadow-playful-sm focus:translate-y-[-2px] transition-transform"
-              placeholder="Enter name..."
+              className="w-full p-4 border-4 border-black rounded-2xl font-black text-xl placeholder:text-black/20 focus:outline-none bg-white shadow-playful-sm focus:translate-y-[-2px] transition-transform uppercase"
+              placeholder="Your name..."
               value={name}
               onChange={e => setName(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <label className="flex items-center gap-2 font-black text-sm px-1">
-              <Shield className="w-4 h-4" /> CURRENT BELT
+            <label className="flex items-center gap-2 font-black text-sm px-1 italic uppercase">
+              <Shield className="w-4 h-4 text-kidBlue" /> Current Rank
             </label>
             <select
-              className="w-full p-4 border-4 border-black rounded-2xl font-black text-xl appearance-none bg-white focus:outline-none shadow-playful-sm"
+              className="w-full p-4 border-4 border-black rounded-2xl font-black text-xl appearance-none bg-white focus:outline-none shadow-playful-sm uppercase"
               value={belt}
               onChange={e => setBelt(e.target.value)}
             >
@@ -112,25 +118,28 @@ export function SettingsPage() {
           </div>
         </div>
         <PlayfulButton
-          variant="red"
+          variant="blue"
           size="xl"
           className="w-full mt-4"
           disabled={saving}
           onClick={handleSave}
         >
-          {saving ? 'SAVING...' : currentUser ? 'UPDATE PROFILE' : 'CREATE PROFILE'}
+          {saving ? 'PREPARING...' : currentUser ? 'SAVE WARRIOR' : 'JOIN THE DOJO'}
         </PlayfulButton>
         {!currentUser && (
           <div className="pt-8 border-t-2 border-black/5 text-center space-y-4">
-            <p className="text-xs font-bold text-muted-foreground px-4">
-              Need to test as a different user?
+            <p className="text-xs font-bold text-muted-foreground px-4 uppercase italic">
+              Wrong portal?
             </p>
-            <Link
-              to="/?demo=true"
-              className="inline-flex items-center gap-1 font-black text-sm text-kidBlue hover:underline"
+            <button
+              onClick={() => {
+                useAppStore.getState().setUserRole(null);
+                navigate('/');
+              }}
+              className="inline-flex items-center gap-1 font-black text-sm text-kidBlue hover:underline uppercase italic"
             >
-              SWITCH TO DEMO ACCOUNTS <ChevronRight className="w-4 h-4" />
-            </Link>
+              Change Role <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </main>

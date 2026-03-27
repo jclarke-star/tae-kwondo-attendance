@@ -1,16 +1,20 @@
 import { create } from 'zustand';
-import { User } from '@shared/types';
+import { User, UserRole } from '@shared/types';
 import { api } from '@/lib/api-client';
 interface AppState {
   currentUser: User | null;
+  userRole: UserRole | null;
   setCurrentUser: (user: User | null) => void;
+  setUserRole: (role: UserRole | null) => void;
   logout: () => void;
   restoreSession: () => Promise<boolean>;
   refreshUser: () => Promise<User | null>;
 }
 const STORAGE_KEY = 'taekwongo_userid';
+const SKIN_KEY = 'taekwongo_skin';
 export const useAppStore = create<AppState>((set, get) => ({
   currentUser: null,
+  userRole: null,
   setCurrentUser: (user) => {
     if (user && user.id) {
       localStorage.setItem(STORAGE_KEY, user.id);
@@ -19,13 +23,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
     set({ currentUser: user });
   },
+  setUserRole: (role) => {
+    if (role) {
+      localStorage.setItem(SKIN_KEY, role);
+    } else {
+      localStorage.removeItem(SKIN_KEY);
+    }
+    set({ userRole: role });
+  },
   logout: () => {
     localStorage.removeItem(STORAGE_KEY);
-    set({ currentUser: null });
+    localStorage.removeItem(SKIN_KEY);
+    set({ currentUser: null, userRole: null });
   },
   restoreSession: async () => {
     const userId = localStorage.getItem(STORAGE_KEY);
-    if (!userId) return false;
+    const skin = localStorage.getItem(SKIN_KEY) as UserRole | null;
+    if (skin) {
+      set({ userRole: skin });
+    }
+    if (!userId) return !!skin;
     try {
       const user = await api<User>(`/api/users/${userId}`);
       if (user && user.id) {
@@ -33,11 +50,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         return true;
       }
       localStorage.removeItem(STORAGE_KEY);
-      return false;
+      return !!skin;
     } catch (e) {
       localStorage.removeItem(STORAGE_KEY);
       set({ currentUser: null });
-      return false;
+      return !!skin;
     }
   },
   refreshUser: async () => {
@@ -45,7 +62,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!user?.id) return null;
     try {
       const updatedUser = await api<User>(`/api/users/${user.id}`);
-      // Only update if something changed to prevent unnecessary re-renders
       if (JSON.stringify(updatedUser) !== JSON.stringify(user)) {
         set({ currentUser: updatedUser });
       }
