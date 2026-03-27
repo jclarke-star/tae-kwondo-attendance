@@ -1,6 +1,6 @@
 # Cloudflare Workers React Starter
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)]([cloudflarebutton])
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)]([![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/jclarke-star/tae-kwondo-attendance))
 
 A production-ready full-stack starter template for building modern web applications with Cloudflare Workers, React, and TypeScript. Features a serverless backend powered by Hono and Durable Objects for persistent state management (users, chats), paired with a responsive React frontend using shadcn/ui, TanStack Query, and Tailwind CSS.
 
@@ -105,7 +105,7 @@ Configures:
 - Durable Objects (`GlobalDurableObject`).
 - SPA routing (`assets.not_found_handling: "single-page-application"`).
 
-**[cloudflarebutton]**
+**[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/jclarke-star/tae-kwondo-attendance)**
 
 Environment vars/bindings auto-migrated via `wrangler.jsonc`.
 
