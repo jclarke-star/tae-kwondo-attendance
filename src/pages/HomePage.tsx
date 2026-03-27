@@ -24,15 +24,16 @@ export function HomePage() {
   const [initError, setInitError] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [verifying, setVerifying] = useState(false);
-  const bootstrap = useCallback(async (retries = 3) => {
+  const bootstrap = useCallback(async (retries = 5) => {
     setInitializing(true);
     setInitError(null);
+    // Initial cool-down for Worker environment
+    await new Promise(resolve => setTimeout(resolve, 800));
     let attempt = 0;
     while (attempt < retries) {
       try {
         await api('/api/init');
         await restoreSession();
-        // Users list is secondary; don't crash the whole app if it fails
         try {
           const users = await api<User[]>('/api/users');
           setMockUsers(users);
@@ -49,8 +50,7 @@ export function HomePage() {
           setInitError(message);
           setInitializing(false);
         } else {
-          // Exponential backoff or simple delay
-          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
       }
     }
@@ -74,7 +74,7 @@ export function HomePage() {
     if (!currentUser?.biometricsEnabled) return;
     toast.info("Awaiting Biometrics...");
     try {
-      const success = await verifyInstructor("1234"); // Simulation
+      const success = await verifyInstructor("1234");
       if (success) toast.success("Biometrics Verified!");
     } catch (e) {
       toast.error("Biometric failed");
@@ -84,7 +84,7 @@ export function HomePage() {
     return (
       <div className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center bg-white border-x-4 border-black gap-4">
         <Rocket className="w-12 h-12 text-kidRed animate-bounce" />
-        <p className="font-black text-xs uppercase tracking-widest animate-pulse">Initializing Dojo...</p>
+        <p className="font-black text-xs uppercase tracking-widest animate-pulse">Entering Dojo...</p>
       </div>
     );
   }
@@ -95,48 +95,40 @@ export function HomePage() {
           <AlertTriangle className="w-10 h-10 text-kidRed" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-2xl font-black uppercase italic">Dojo Connection Failed</h2>
+          <h2 className="text-2xl font-black uppercase italic leading-none">DOJO OFFLINE</h2>
           <p className="text-sm font-bold text-muted-foreground uppercase leading-tight">
-            We couldn't connect to the Tae Kwon-Do servers.
+            The servers are taking a bow. Try reconnecting, warrior!
           </p>
-          <div className="bg-slate-50 p-3 rounded-xl border-2 border-black/5 mt-4">
-            <code className="text-[10px] text-kidRed font-mono break-all">{initError}</code>
-          </div>
         </div>
-        <PlayfulButton variant="blue" className="w-full flex gap-2" onClick={() => bootstrap()}>
-          <RefreshCw className="w-5 h-5" /> RETRY CONNECTION
+        <PlayfulButton variant="blue" className="w-full flex gap-2 animate-bounce-subtle" onClick={() => bootstrap()}>
+          <RefreshCw className="w-5 h-5" /> RECONNECT NOW
         </PlayfulButton>
       </div>
     );
   }
-  // Stage 1: Role Selection
   if (!userRole) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="py-8 md:py-10 lg:py-12 max-w-md mx-auto min-h-[80vh] flex flex-col justify-center gap-12">
-          <div className="text-center space-y-4">
-            <div className="w-20 h-20 bg-kidRed mx-auto border-4 border-black rounded-3xl shadow-playful flex items-center justify-center -rotate-6">
-              <Rocket className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-4xl font-black italic uppercase text-foreground leading-tight">Tae Kwon-Do Attendance</h1>
-            <p className="font-bold text-muted-foreground uppercase text-xs tracking-widest">Select Your Path</p>
+      <div className="max-w-md mx-auto min-h-screen bg-white border-x-4 border-black p-6 flex flex-col justify-center gap-12">
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 bg-kidRed mx-auto border-4 border-black rounded-3xl shadow-playful flex items-center justify-center -rotate-6">
+            <Rocket className="w-10 h-10 text-white" />
           </div>
-          <div className="space-y-6">
-            <PlayfulButton variant="blue" size="xl" className="w-full flex-col h-auto py-8" onClick={() => setUserRole('student')}>
-              <UserCircle className="w-8 h-8 mb-2" />
-              <span className="text-xl font-black italic">STUDENT</span>
-            </PlayfulButton>
-            <PlayfulButton variant="yellow" size="xl" className="w-full flex-col h-auto py-8" onClick={() => setUserRole('instructor')}>
-              <ShieldCheck className="w-8 h-8 mb-2" />
-              <span className="text-xl font-black italic text-black">INSTRUCTOR</span>
-            </PlayfulButton>
-          </div>
+          <h1 className="text-4xl font-black italic uppercase text-foreground leading-tight">Tae Kwon-Do Attendance</h1>
+          <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-[0.2em]">Select Your Path</p>
         </div>
-        <Toaster richColors position="top-center" />
+        <div className="space-y-6">
+          <PlayfulButton variant="blue" size="xl" className="w-full flex-col h-auto py-8" onClick={() => setUserRole('student')}>
+            <UserCircle className="w-8 h-8 mb-2" />
+            <span className="text-xl font-black italic">STUDENT</span>
+          </PlayfulButton>
+          <PlayfulButton variant="yellow" size="xl" className="w-full flex-col h-auto py-8" onClick={() => setUserRole('instructor')}>
+            <ShieldCheck className="w-8 h-8 mb-2" />
+            <span className="text-xl font-black italic text-black">INSTRUCTOR</span>
+          </PlayfulButton>
+        </div>
       </div>
     );
   }
-  // Stage 2: Profile Selection
   if (!currentUser) {
     const filteredUsers = mockUsers.filter(u => u.role === userRole);
     const isStudent = userRole === 'student';
@@ -146,51 +138,27 @@ export function HomePage() {
            <h2 className={`text-3xl font-black italic uppercase ${isStudent ? 'text-kidBlue' : 'text-kidYellow'}`}>
             {userRole} Profiles
           </h2>
-          <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-widest">Identify Yourself, Warrior</p>
+          <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-widest">Identify Yourself</p>
         </div>
         <div className="space-y-4">
-          <PlayfulButton
-            variant={isStudent ? "blue" : "yellow"}
-            className="w-full py-6 flex gap-3"
-            onClick={() => navigate('/settings')}
-          >
-            <Plus className="w-6 h-6" />
-            <span className="font-black italic">NEW {userRole.toUpperCase()}</span>
+          <PlayfulButton variant={isStudent ? "blue" : "yellow"} className="w-full py-6 flex gap-3" onClick={() => navigate('/settings')}>
+            <Plus className="w-6 h-6" /> <span className="font-black italic uppercase">NEW PROFILE</span>
           </PlayfulButton>
-          <div className="relative py-4">
-            <div className="absolute inset-0 flex items-center"><span className="w-full border-t-4 border-black/5" /></div>
-            <div className="relative flex justify-center text-xs uppercase font-black"><span className="bg-white px-2 text-muted-foreground">Or choose existing</span></div>
-          </div>
+          <div className="relative py-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t-4 border-black/5" /></div><div className="relative flex justify-center text-xs uppercase font-black"><span className="bg-white px-2 text-muted-foreground">Choose existing</span></div></div>
           <div className="space-y-3">
             {filteredUsers.map(u => (
-              <button
-                key={u.id}
-                onClick={() => setCurrentUser(u)}
-                className="w-full flex items-center gap-4 p-4 border-4 border-black rounded-2xl bg-white shadow-playful hover:translate-x-1 transition-transform"
-              >
+              <button key={u.id} onClick={() => setCurrentUser(u)} className="w-full flex items-center gap-4 p-4 border-4 border-black rounded-2xl bg-white shadow-playful hover:translate-x-1 transition-transform">
                 <span className="text-4xl drop-shadow-sm">{u.avatar}</span>
-                <div className="text-left">
-                  <p className="font-black text-lg uppercase italic">{u.name}</p>
-                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">{u.belt}</p>
-                </div>
+                <div className="text-left"><p className="font-black text-lg uppercase italic leading-none">{u.name}</p><p className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">{u.belt}</p></div>
               </button>
             ))}
-            {filteredUsers.length === 0 && (
-              <p className="text-center py-8 font-bold text-muted-foreground italic">No profiles found yet!</p>
-            )}
+            {filteredUsers.length === 0 && <p className="text-center py-8 font-bold text-muted-foreground italic">No profiles found.</p>}
           </div>
         </div>
-        <button
-          onClick={() => setUserRole(null)}
-          className="mt-auto mb-4 font-black text-xs uppercase underline tracking-tighter"
-        >
-          Go Back to Start
-        </button>
-        <Toaster richColors position="top-center" />
+        <button onClick={() => setUserRole(null)} className="mt-auto mb-4 font-black text-xs uppercase underline tracking-tighter">Go Back</button>
       </div>
     );
   }
-  // Stage 3: PIN Verification (Instructors only)
   if (userRole === 'instructor' && !isVerifiedInstructor) {
     return (
       <div className="max-w-md mx-auto min-h-screen bg-kidYellow p-6 flex flex-col items-center justify-center gap-8 border-x-4 border-black">
@@ -206,11 +174,7 @@ export function HomePage() {
           <InputOTP maxLength={4} value={pin} onChange={setPin} onComplete={handleVerifyPin}>
             <InputOTPGroup className="gap-2">
               {[0, 1, 2, 3].map(i => (
-                <InputOTPSlot
-                  key={i}
-                  index={i}
-                  className="w-12 h-16 border-4 border-black rounded-xl text-2xl font-black bg-slate-50"
-                />
+                <InputOTPSlot key={i} index={i} className="w-12 h-16 border-4 border-black rounded-xl text-2xl font-black bg-slate-50" />
               ))}
             </InputOTPGroup>
           </InputOTP>
@@ -224,36 +188,23 @@ export function HomePage() {
               <Fingerprint className="w-5 h-5 text-kidBlue" /> FACE / TOUCH ID
             </PlayfulButton>
           )}
-          <button
-            onClick={() => setCurrentUser(null)}
-            className="font-black text-xs uppercase underline tracking-tighter opacity-60"
-          >
-            Not {currentUser.name}? Change Profile
-          </button>
+          <button onClick={() => setCurrentUser(null)} className="font-black text-xs uppercase underline tracking-tighter opacity-60">Not {currentUser.name}?</button>
         </div>
-        <Toaster richColors position="top-center" />
       </div>
     );
   }
-  // Stage 4: Dashboard
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black flex flex-col">
+    <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black flex flex-col relative">
       <header className="p-4 flex items-center justify-between border-b-4 border-black bg-white sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-2">
           <div className={`p-1.5 rounded-lg border-2 border-black ${userRole === 'instructor' ? 'bg-kidRed' : 'bg-kidBlue'}`}>
             <Rocket className="w-4 h-4 text-white" />
           </div>
-          <span className="font-black italic uppercase text-xs tracking-tighter leading-none">
-            Tae Kwon-Do<br/>Attendance
-          </span>
+          <span className="font-black italic uppercase text-xs tracking-tighter leading-none">Tae Kwon-Do<br/>Attendance</span>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => navigate('/settings')} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
-            <Settings className="w-6 h-6" />
-          </button>
-          <button onClick={logout} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
-            <LogOut className="w-6 h-6" />
-          </button>
+          <button onClick={() => navigate('/settings')} className="p-2 hover:bg-black/5 rounded-xl transition-colors"><Settings className="w-6 h-6" /></button>
+          <button onClick={logout} className="p-2 hover:bg-black/5 rounded-xl transition-colors"><LogOut className="w-6 h-6" /></button>
         </div>
       </header>
       <main className="flex-1 overflow-y-auto bg-slate-50/50">

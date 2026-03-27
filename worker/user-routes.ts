@@ -3,6 +3,7 @@ import type { Env } from './core-utils';
 import { UserEntity, ClassSessionEntity, GradingEventEntity } from "./entities";
 import { ok, bad, notFound } from './core-utils';
 import { MOCK_BADGES } from "@shared/mock-data";
+import { BELT_ORDER } from "@shared/types";
 async function hashPin(pin: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(pin);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -66,7 +67,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       pinHash
     };
     if (!exists) {
-      // Use the static create method which handles indexing correctly
       await UserEntity.create(c.env, instructorData);
     } else {
       await userEnt.save(instructorData);
@@ -177,5 +177,23 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       }));
       return ok(c, updated);
     }
+  });
+  app.post('/api/users/:id/promote', async (c) => {
+    try { await validateInstructor(c); } catch (e) { return bad(c, (e as Error).message); }
+    const userId = c.req.param('id');
+    const userEnt = new UserEntity(c.env, userId);
+    if (!await userEnt.exists()) return notFound(c, 'Student not found');
+    const updated = await userEnt.mutate(u => {
+      const currentIndex = BELT_ORDER.findIndex(b => b === u.belt);
+      if (currentIndex === -1 || currentIndex === BELT_ORDER.length - 1) return u;
+      const nextBelt = BELT_ORDER[currentIndex + 1];
+      console.log(`[PROMOTION] Promoting ${u.name} to ${nextBelt}`);
+      return {
+        ...u,
+        belt: nextBelt,
+        totalSessions: 0 // Reset progress cycle for new belt
+      };
+    });
+    return ok(c, updated);
   });
 }
