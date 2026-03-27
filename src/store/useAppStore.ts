@@ -28,18 +28,28 @@ export const useAppStore = create<AppState>((set, get) => ({
       localStorage.setItem(STORAGE_KEY, user.id);
     } else {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(VERIFIED_KEY);
+      localStorage.removeItem(HASH_KEY);
+      set({ isVerifiedInstructor: false, verifiedPinHash: null });
     }
     set({ currentUser: user });
   },
   setUserRole: (role) => {
+    // When switching roles, always clear the specific user selection and verification
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(VERIFIED_KEY);
+    localStorage.removeItem(HASH_KEY);
     if (role) {
       localStorage.setItem(SKIN_KEY, role);
     } else {
       localStorage.removeItem(SKIN_KEY);
     }
-    localStorage.removeItem(VERIFIED_KEY);
-    localStorage.removeItem(HASH_KEY);
-    set({ userRole: role, isVerifiedInstructor: false, verifiedPinHash: null });
+    set({ 
+      userRole: role, 
+      currentUser: null,
+      isVerifiedInstructor: false, 
+      verifiedPinHash: null 
+    });
   },
   verifyInstructor: async (pin: string) => {
     const user = get().currentUser;
@@ -70,7 +80,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     localStorage.removeItem(SKIN_KEY);
     localStorage.removeItem(VERIFIED_KEY);
     localStorage.removeItem(HASH_KEY);
-    set({ currentUser: null, userRole: null, isVerifiedInstructor: false, verifiedPinHash: null });
+    set({ 
+      currentUser: null, 
+      userRole: null, 
+      isVerifiedInstructor: false, 
+      verifiedPinHash: null 
+    });
   },
   restoreSession: async () => {
     const userId = localStorage.getItem(STORAGE_KEY);
@@ -84,6 +99,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       const user = await api<User>(`/api/users/${userId}`);
       if (user && user.id) {
+        // Safety: verify role matches skin
+        if (skin && user.role !== skin) {
+           localStorage.removeItem(STORAGE_KEY);
+           set({ currentUser: null });
+           return true;
+        }
         set({ currentUser: user });
         return true;
       }

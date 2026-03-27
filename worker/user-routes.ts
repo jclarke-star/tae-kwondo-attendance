@@ -3,7 +3,6 @@ import type { Env } from './core-utils';
 import { UserEntity, ClassSessionEntity, GradingEventEntity } from "./entities";
 import { ok, bad, notFound } from './core-utils';
 import { MOCK_BADGES } from "@shared/mock-data";
-import { Badge } from "@shared/types";
 async function hashPin(pin: string): Promise<string> {
   const msgUint8 = new TextEncoder().encode(pin);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
@@ -13,7 +12,7 @@ async function hashPin(pin: string): Promise<string> {
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   const validateInstructor = async (c: any) => {
     const instructorId = c.req.header("X-Instructor-Id");
-    const providedPinHash = c.req.header("X-Instructor-Pin"); // Client sends hash or raw if legacy, but we expect hash now
+    const providedPinHash = c.req.header("X-Instructor-Pin"); 
     if (!instructorId || !providedPinHash) {
       throw new Error("Instructor credentials required");
     }
@@ -21,13 +20,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!await userEnt.exists()) throw new Error("Instructor profile not found");
     const user = await userEnt.getState();
     if (user.role !== 'instructor') throw new Error("Unauthorized role");
-    // For backwards compatibility during phase transition or if the client sends raw PIN '1234'
-    const legacyHash = await hashPin("1234");
-    if (user.pinHash) {
-      if (user.pinHash !== providedPinHash) throw new Error("Invalid Instructor PIN");
-    } else {
-      // Fallback for seeded instructors who haven't set a PIN yet
-      if (providedPinHash !== legacyHash) throw new Error("Invalid Instructor PIN");
+    // Fallback for seeded instructors who haven't set a PIN yet (default 1234)
+    const storedHash = user.pinHash || (await hashPin("1234"));
+    if (storedHash !== providedPinHash) {
+      throw new Error("Invalid Instructor PIN");
     }
   };
   app.get('/api/init', async (c) => {
@@ -52,21 +48,29 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.post('/api/instructors/register', async (c) => {
     const body = await c.req.json();
     const { name, belt, avatar, pin, id } = body;
-    if (!name || !belt || !pin) return bad(c, 'Name, belt, and PIN required');
-    const pinHash = await hashPin(pin);
+    if (!name || !belt) return bad(c, 'Name and belt required');
     const userId = id || crypto.randomUUID();
+    const userEnt = new UserEntity(c.env, userId);
+    let existingData = await userEnt.getState();
+    const pinHash = pin ? await hashPin(pin) : (existingData.pinHash || await hashPin("1234"));
     const instructorData = {
+      ...existingData,
       id: userId,
       name,
       belt,
-      avatar: avatar || '🥋',
+      avatar: avatar || existingData.avatar || '🥋',
       role: 'instructor' as const,
-      streak: 0,
-      totalSessions: 0,
-      badges: [],
+      streak: existingData.streak || 0,
+      totalSessions: existingData.totalSessions || 0,
+      badges: existingData.badges || [],
       pinHash
     };
-    await UserEntity.create(c.env, instructorData);
+    await userEnt.save(instructorData);
+    // Ensure it's in the index if new
+    if (!id) {
+       const idx = new (UserEntity as any).Index(c.env, UserEntity.indexName);
+       await idx.add(userId);
+    }
     return ok(c, instructorData);
   });
   app.get('/api/classes', async (c) => {
@@ -134,7 +138,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   app.get('/api/users', async (c) => {
     const data = await UserEntity.list(c.env);
-    return ok(c, data.items);
+    // Return sorted by name for cleaner lists
+    const sorted = data.items.sort((a, b) => a.name.localeCompare(b.name));
+    return ok(c, sorted);
   });
   app.get('/api/users/:id', async (c) => {
     const ent = new UserEntity(c.env, c.req.param('id'));
@@ -143,16 +149,22 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   app.post('/api/users/register', async (c) => {
     const body = await c.req.json();
-    const ent = new UserEntity(c.env, body.id || crypto.randomUUID());
+    const userId = body.id || crypto.randomUUID();
+    const ent = new UserEntity(c.env, userId);
     const updated = await ent.mutate(u => ({
       ...u,
+      id: userId,
       name: body.name || u.name,
       belt: body.belt || u.belt,
       avatar: body.avatar || u.avatar,
       biometricsEnabled: body.biometricsEnabled !== undefined ? body.biometricsEnabled : u.biometricsEnabled,
       webAuthnCredentialId: body.webAuthnCredentialId || u.webAuthnCredentialId
     }));
-    if (!body.id) await UserEntity.removeFromIndex(c.env, ent.id); // clean up if logic weird
+    if (!body.id) {
+       // Ensure index addition for new students
+       const idx = new (UserEntity as any).Index(c.env, UserEntity.indexName);
+       await idx.add(userId);
+    }
     return ok(c, updated);
   });
 }
