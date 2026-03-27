@@ -12,7 +12,7 @@ async function hashPin(pin: string): Promise<string> {
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   const validateInstructor = async (c: any) => {
     const instructorId = c.req.header("X-Instructor-Id");
-    const providedPinHash = c.req.header("X-Instructor-Pin"); 
+    const providedPinHash = c.req.header("X-Instructor-Pin");
     if (!instructorId || !providedPinHash) {
       throw new Error("Instructor credentials required");
     }
@@ -20,7 +20,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!await userEnt.exists()) throw new Error("Instructor profile not found");
     const user = await userEnt.getState();
     if (user.role !== 'instructor') throw new Error("Unauthorized role");
-    // Fallback for seeded instructors who haven't set a PIN yet (default 1234)
     const storedHash = user.pinHash || (await hashPin("1234"));
     if (storedHash !== providedPinHash) {
       throw new Error("Invalid Instructor PIN");
@@ -51,6 +50,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!name || !belt) return bad(c, 'Name and belt required');
     const userId = id || crypto.randomUUID();
     const userEnt = new UserEntity(c.env, userId);
+    const exists = await userEnt.exists();
     let existingData = await userEnt.getState();
     const pinHash = pin ? await hashPin(pin) : (existingData.pinHash || await hashPin("1234"));
     const instructorData = {
@@ -65,11 +65,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       badges: existingData.badges || [],
       pinHash
     };
-    await userEnt.save(instructorData);
-    // Ensure it's in the index if new
-    if (!id) {
-       const idx = new (UserEntity as any).Index(c.env, UserEntity.indexName);
-       await idx.add(userId);
+    if (!exists) {
+      // Use the static create method which handles indexing correctly
+      await UserEntity.create(c.env, instructorData);
+    } else {
+      await userEnt.save(instructorData);
     }
     return ok(c, instructorData);
   });
@@ -138,8 +138,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   app.get('/api/users', async (c) => {
     const data = await UserEntity.list(c.env);
-    // Return sorted by name for cleaner lists
-    const sorted = data.items.sort((a, b) => a.name.localeCompare(b.name));
+    const sorted = data.items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     return ok(c, sorted);
   });
   app.get('/api/users/:id', async (c) => {
@@ -151,20 +150,32 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const body = await c.req.json();
     const userId = body.id || crypto.randomUUID();
     const ent = new UserEntity(c.env, userId);
-    const updated = await ent.mutate(u => ({
-      ...u,
-      id: userId,
-      name: body.name || u.name,
-      belt: body.belt || u.belt,
-      avatar: body.avatar || u.avatar,
-      biometricsEnabled: body.biometricsEnabled !== undefined ? body.biometricsEnabled : u.biometricsEnabled,
-      webAuthnCredentialId: body.webAuthnCredentialId || u.webAuthnCredentialId
-    }));
-    if (!body.id) {
-       // Ensure index addition for new students
-       const idx = new (UserEntity as any).Index(c.env, UserEntity.indexName);
-       await idx.add(userId);
+    const exists = await ent.exists();
+    if (!exists) {
+      const newUser = {
+        id: userId,
+        name: body.name || "New Warrior",
+        role: "student" as const,
+        belt: body.belt || "White Belt",
+        avatar: body.avatar || "🥋",
+        streak: 0,
+        badges: [],
+        totalSessions: 0,
+        biometricsEnabled: body.biometricsEnabled || false,
+        webAuthnCredentialId: body.webAuthnCredentialId || ""
+      };
+      await UserEntity.create(c.env, newUser);
+      return ok(c, newUser);
+    } else {
+      const updated = await ent.mutate(u => ({
+        ...u,
+        name: body.name || u.name,
+        belt: body.belt || u.belt,
+        avatar: body.avatar || u.avatar,
+        biometricsEnabled: body.biometricsEnabled !== undefined ? body.biometricsEnabled : u.biometricsEnabled,
+        webAuthnCredentialId: body.webAuthnCredentialId || u.webAuthnCredentialId
+      }));
+      return ok(c, updated);
     }
-    return ok(c, updated);
   });
 }

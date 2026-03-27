@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { StudentDashboard } from '@/components/StudentDashboard';
 import { InstructorDashboard } from '@/components/InstructorDashboard';
@@ -23,21 +23,21 @@ export function HomePage() {
   const [initializing, setInitializing] = useState(true);
   const [pin, setPin] = useState("");
   const [verifying, setVerifying] = useState(false);
-  useEffect(() => {
-    const bootstrap = async () => {
-      try {
-        await api('/api/init');
-        await restoreSession();
-        const users = await api<User[]>('/api/users');
-        setMockUsers(users);
-      } catch (e) {
-        console.error('Init failed', e);
-      } finally {
-        setInitializing(false);
-      }
-    };
-    bootstrap();
+  const bootstrap = useCallback(async () => {
+    try {
+      await api('/api/init');
+      await restoreSession();
+      const users = await api<User[]>('/api/users');
+      setMockUsers(users);
+    } catch (e) {
+      console.error('Init failed', e);
+    } finally {
+      setInitializing(false);
+    }
   }, [restoreSession]);
+  useEffect(() => {
+    bootstrap();
+  }, [bootstrap]);
   const handleVerifyPin = async () => {
     if (pin.length < 4 || verifying) return;
     setVerifying(true);
@@ -101,14 +101,14 @@ export function HomePage() {
     return (
       <div className="max-w-md mx-auto min-h-screen bg-white border-x-4 border-black p-6 flex flex-col gap-6 overflow-y-auto">
         <div className="mt-8 text-center space-y-2">
-           <h2 className={`text-3xl font-black italic uppercase ${isStudent ? 'text-kidBlue' : 'text-kidYellow text-shadow-black'}`}>
+           <h2 className={`text-3xl font-black italic uppercase ${isStudent ? 'text-kidBlue' : 'text-kidYellow'}`}>
             {userRole} Profiles
           </h2>
           <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-widest">Identify Yourself, Warrior</p>
         </div>
         <div className="space-y-4">
-          <PlayfulButton 
-            variant={isStudent ? "blue" : "yellow"} 
+          <PlayfulButton
+            variant={isStudent ? "blue" : "yellow"}
             className="w-full py-6 flex gap-3"
             onClick={() => navigate('/settings')}
           >
@@ -121,9 +121,9 @@ export function HomePage() {
           </div>
           <div className="space-y-3">
             {filteredUsers.map(u => (
-              <button 
-                key={u.id} 
-                onClick={() => setCurrentUser(u)} 
+              <button
+                key={u.id}
+                onClick={() => setCurrentUser(u)}
                 className="w-full flex items-center gap-4 p-4 border-4 border-black rounded-2xl bg-white shadow-playful hover:translate-x-1 transition-transform"
               >
                 <span className="text-4xl drop-shadow-sm">{u.avatar}</span>
@@ -138,8 +138,8 @@ export function HomePage() {
             )}
           </div>
         </div>
-        <button 
-          onClick={() => setUserRole(null)} 
+        <button
+          onClick={() => setUserRole(null)}
           className="mt-auto mb-4 font-black text-xs uppercase underline tracking-tighter"
         >
           Go Back to Start
@@ -164,10 +164,10 @@ export function HomePage() {
           <InputOTP maxLength={4} value={pin} onChange={setPin} onComplete={handleVerifyPin}>
             <InputOTPGroup className="gap-2">
               {[0, 1, 2, 3].map(i => (
-                <InputOTPSlot 
-                  key={i} 
-                  index={i} 
-                  className="w-12 h-16 border-4 border-black rounded-xl text-2xl font-black bg-slate-50" 
+                <InputOTPSlot
+                  key={i}
+                  index={i}
+                  className="w-12 h-16 border-4 border-black rounded-xl text-2xl font-black bg-slate-50"
                 />
               ))}
             </InputOTPGroup>
@@ -182,8 +182,8 @@ export function HomePage() {
               <Fingerprint className="w-5 h-5 text-kidBlue" /> FACE / TOUCH ID
             </PlayfulButton>
           )}
-          <button 
-            onClick={() => setCurrentUser(null)} 
+          <button
+            onClick={() => setCurrentUser(null)}
             className="font-black text-xs uppercase underline tracking-tighter opacity-60"
           >
             Not {currentUser.name}? Change Profile
