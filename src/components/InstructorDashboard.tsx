@@ -4,7 +4,7 @@ import { PlayfulButton } from '@/components/ui/PlayfulButton';
 import { PlayfulCard } from '@/components/ui/PlayfulCard';
 import { api } from '@/lib/api-client';
 import { ClassSession, User } from '@shared/types';
-import { Check, X, Users, ShieldCheck } from 'lucide-react';
+import { Check, X, Users, ShieldCheck, Hourglass } from 'lucide-react';
 import { toast } from 'sonner';
 export function InstructorDashboard() {
   const [session, setSession] = useState<ClassSession | null>(null);
