@@ -3,12 +3,11 @@ import { useAppStore } from '@/store/useAppStore';
 import { StudentDashboard } from '@/components/StudentDashboard';
 import { InstructorDashboard } from '@/components/InstructorDashboard';
 import { PlayfulButton } from '@/components/ui/PlayfulButton';
-import { PlayfulCard } from '@/components/ui/PlayfulCard';
 import { api } from '@/lib/api-client';
 import { User } from '@shared/types';
 import { LogOut, Rocket, Settings, UserCircle, ShieldCheck, Lock, Fingerprint } from 'lucide-react';
 import { Toaster, toast } from '@/components/ui/sonner';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 export function HomePage() {
   const currentUser = useAppStore(s => s.currentUser);
@@ -20,35 +19,38 @@ export function HomePage() {
   const logout = useAppStore(s => s.logout);
   const restoreSession = useAppStore(s => s.restoreSession);
   const navigate = useNavigate();
-  const location = useLocation();
   const [mockUsers, setMockUsers] = useState<User[]>([]);
   const [initializing, setInitializing] = useState(true);
   const [pin, setPin] = useState("");
   const [verifying, setVerifying] = useState(false);
+  // Phase 1: Initial Bootstrap
   useEffect(() => {
-    const init = async () => {
+    const bootstrap = async () => {
       try {
         await api('/api/init');
-        const restored = await restoreSession();
+        await restoreSession();
         const users = await api<User[]>('/api/users');
         setMockUsers(users);
-        // If instructor role but no profile exists, go to settings
-        if (restored && userRole === 'instructor' && !currentUser) {
-          const instructor = users.find(u => u.role === 'instructor');
-          if (!instructor) {
-            navigate('/settings');
-          } else {
-            setCurrentUser(instructor);
-          }
-        }
       } catch (e) {
         console.error('Init failed', e);
       } finally {
         setInitializing(false);
       }
     };
-    init();
-  }, [restoreSession, navigate]);
+    bootstrap();
+  }, [restoreSession]);
+  // Phase 2: Role-based logic (redirection/auto-selection)
+  useEffect(() => {
+    if (initializing) return;
+    if (userRole === 'instructor' && !currentUser && mockUsers.length > 0) {
+      const instructor = mockUsers.find(u => u.role === 'instructor');
+      if (!instructor) {
+        navigate('/settings');
+      } else {
+        setCurrentUser(instructor);
+      }
+    }
+  }, [initializing, userRole, currentUser, mockUsers, navigate, setCurrentUser]);
   const handleVerifyPin = async () => {
     if (pin.length < 4 || verifying) return;
     setVerifying(true);
@@ -64,10 +66,8 @@ export function HomePage() {
   const handleBiometricAuth = async () => {
     if (!currentUser?.biometricsEnabled) return;
     toast.info("Awaiting Biometrics...");
-    // Simulated WebAuthn authentication
     try {
-      // In real app: const assertion = await navigator.credentials.get({...})
-      const success = await verifyInstructor("1234"); // Bypass for demo
+      const success = await verifyInstructor("1234"); // Simulation
       if (success) toast.success("Biometrics Verified!");
     } catch (e) {
       toast.error("Biometric failed");
@@ -88,7 +88,7 @@ export function HomePage() {
             <div className="w-20 h-20 bg-kidRed mx-auto border-4 border-black rounded-3xl shadow-playful flex items-center justify-center -rotate-6">
               <Rocket className="w-10 h-10 text-white" />
             </div>
-            <h1 className="text-4xl font-black italic uppercase text-foreground">TaeKwonGo</h1>
+            <h1 className="text-4xl font-black italic uppercase text-foreground">Tae Kwon-Do Attendance</h1>
             <p className="font-bold text-muted-foreground uppercase text-xs tracking-widest">Select Your Path</p>
           </div>
           <div className="space-y-6">
@@ -158,7 +158,7 @@ export function HomePage() {
       <header className="p-4 flex items-center justify-between border-b-4 border-black bg-white sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <Rocket className={`w-6 h-6 ${userRole === 'instructor' ? 'text-kidRed' : 'text-kidBlue'}`} />
-          <span className="font-black italic uppercase">TaeKwonGo</span>
+          <span className="font-black italic uppercase">Tae Kwon-Do Attendance</span>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/settings')} className="p-2 hover:bg-black/5 rounded-xl"><Settings className="w-6 h-6" /></button>

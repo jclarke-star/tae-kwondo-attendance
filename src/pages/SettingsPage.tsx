@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { PlayfulButton } from '@/components/ui/PlayfulButton';
-import { PlayfulCard } from '@/components/ui/PlayfulCard';
 import { BELT_ORDER, User as UserType } from '@shared/types';
 import { api } from '@/lib/api-client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, User, Shield, Smile, Lock, Fingerprint } from 'lucide-react';
+import { ArrowLeft, User, Shield, Lock, Fingerprint } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 const EMOJIS = ['🥋', '🐯', '🦈', '🐉', '🐼', '🦅', '🦁', '🔥', '⚡️', '🌟'];
 export function SettingsPage() {
@@ -53,7 +52,7 @@ export function SettingsPage() {
             name: name.trim(),
             belt,
             avatar,
-            pin: pin || "1234" // Default if updating but not changing
+            pin: pin || "1234"
           })
         });
       } else {
@@ -78,19 +77,18 @@ export function SettingsPage() {
   };
   const handleEnableBiometrics = async () => {
     toast.info("Registering biometric key...");
-    // Simulated WebAuthn registration
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
       const userID = new TextEncoder().encode(currentUser?.id || "anonymous");
       const publicKey: PublicKeyCredentialCreationOptions = {
         challenge,
-        rp: { name: "TaeKwonGo", id: window.location.hostname },
+        rp: { name: "Tae Kwon-Do Attendance", id: window.location.hostname },
         user: { id: userID, name: name, displayName: name },
         pubKeyCredParams: [{ alg: -7, type: "public-key" }],
         timeout: 60000,
         attestation: "direct"
       };
-      // In a real env, navigator.credentials.create(publicKey)
+      // Simulation of WebAuthn success
       await api('/api/users/register', {
         method: 'POST',
         body: JSON.stringify({
