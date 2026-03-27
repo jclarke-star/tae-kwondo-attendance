@@ -22,27 +22,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 export function InstructorDashboard() {
+  // 1. ALL HOOKS AT TOP LEVEL
   const isVerifiedInstructor = useAppStore(s => s.isVerifiedInstructor);
   const clearVerification = useAppStore(s => s.clearVerification);
-
   const [session, setSession] = useState<ClassSession | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const prevPendingIds = useRef<string[]>([]);
-
-  // Safety check
-  if (!isVerifiedInstructor) {
-    return (
-      <div className="p-12 text-center space-y-4">
-        <div className="text-6xl mb-4">🚫</div>
-        <h2 className="text-2xl font-black italic uppercase">Access Denied</h2>
-        <p className="font-bold text-muted-foreground italic">Verification required to access Master Station.</p>
-        <PlayfulButton onClick={() => window.location.reload()} variant="blue">Return to Login</PlayfulButton>
-      </div>
-    );
-  }
-
   const fetchData = useCallback(async () => {
+    // Check verification inside the callback to prevent unauthorized API calls
+    if (!isVerifiedInstructor) return;
     try {
       const [classData, userData] = await Promise.all([
         api<ClassSession[]>('/api/classes'),
@@ -74,15 +63,15 @@ export function InstructorDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [clearVerification]);
-
+  }, [isVerifiedInstructor, clearVerification]);
   useEffect(() => {
+    if (!isVerifiedInstructor) return;
     fetchData();
     const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
-  }, [fetchData]);
+  }, [fetchData, isVerifiedInstructor]);
   const handleAction = useCallback(async (userId: string, action: 'approve' | 'deny') => {
-    if (!session) return;
+    if (!session || !isVerifiedInstructor) return;
     try {
       await api(`/api/classes/${session.id}/${action}`, {
         method: 'POST',
@@ -98,10 +87,9 @@ export function InstructorDashboard() {
         toast.error('Operation failed');
       }
     }
-  }, [session, fetchData, clearVerification]);
-
+  }, [session, fetchData, clearVerification, isVerifiedInstructor]);
   const handleEndSession = async () => {
-    if (!session) return;
+    if (!session || !isVerifiedInstructor) return;
     try {
       await api(`/api/classes/${session.id}/end`, { method: 'POST' });
       toast.success('Mat cleared! Class finished.');
@@ -115,7 +103,20 @@ export function InstructorDashboard() {
       }
     }
   };
-  if (loading && !session) return <div className="p-20 text-center font-black italic uppercase animate-pulse">Contacting Dojo...</div>;
+  // 2. CONDITIONAL RENDERING AFTER HOOKS
+  if (!isVerifiedInstructor) {
+    return (
+      <div className="p-12 text-center space-y-4">
+        <div className="text-6xl mb-4">🚫</div>
+        <h2 className="text-2xl font-black italic uppercase">Access Denied</h2>
+        <p className="font-bold text-muted-foreground italic">Verification required to access Master Station.</p>
+        <PlayfulButton onClick={() => window.location.reload()} variant="blue">Return to Login</PlayfulButton>
+      </div>
+    );
+  }
+  if (loading && !session) {
+    return <div className="p-20 text-center font-black italic uppercase animate-pulse">Contacting Dojo...</div>;
+  }
   const pendingUsers = users.filter(u => session?.pendingCheckIns.includes(u.id));
   const confirmedUsers = users.filter(u => session?.confirmedCheckIns.includes(u.id));
   return (

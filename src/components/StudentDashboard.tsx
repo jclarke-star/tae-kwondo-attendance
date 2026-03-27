@@ -18,6 +18,7 @@ export function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
+  const initialLoadDone = useRef(false);
   const fetchData = useCallback(async () => {
     if (!currentUser?.id) return;
     try {
@@ -33,12 +34,12 @@ export function StudentDashboard() {
         const isConfirmed = activeClass?.confirmedCheckIns.includes(updatedUser.id);
         const isPending = activeClass?.pendingCheckIns.includes(updatedUser.id);
         const currentStatus = isConfirmed ? 'confirmed' : isPending ? 'pending' : 'none';
-        // Only trigger celebration if transitioning from pending to confirmed
-        if (prevStatusRef.current === 'pending' && currentStatus === 'confirmed') {
+        // Only trigger celebration if transitioning from pending to confirmed AND not on initial mount
+        if (initialLoadDone.current && prevStatusRef.current === 'pending' && currentStatus === 'confirmed') {
           setShowCelebration(true);
         }
-        // Initialize or update status reference
         prevStatusRef.current = currentStatus;
+        initialLoadDone.current = true;
       }
     } catch (e) {
       console.error('Polling error', e);
@@ -76,9 +77,9 @@ export function StudentDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 py-4">
       {showCelebration && (
-        <Celebration
-          text="KI-YAH! CONFIRMED!"
-          onComplete={() => setShowCelebration(false)}
+        <Celebration 
+          text="KI-YAH! CONFIRMED!" 
+          onComplete={() => setShowCelebration(false)} 
         />
       )}
       <PlayfulCard className="text-center relative overflow-hidden pt-12 border-kidBlue shadow-playful-lg">
@@ -89,9 +90,9 @@ export function StudentDashboard() {
         <div className="text-7xl mb-2 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">{currentUser?.avatar}</div>
         <h2 className="text-3xl font-black tracking-tight uppercase italic">{currentUser?.name}</h2>
         <div className="mt-6">
-          <BeltProgress
-            currentBelt={currentUser?.belt || "White Belt"}
-            totalSessions={currentUser?.totalSessions || 0}
+          <BeltProgress 
+            currentBelt={currentUser?.belt || "White Belt"} 
+            totalSessions={currentUser?.totalSessions || 0} 
           />
         </div>
       </PlayfulCard>
@@ -127,9 +128,9 @@ export function StudentDashboard() {
                 <p className="text-xl font-black uppercase italic">Master is Approving...</p>
               </div>
             ) : (
-              <PlayfulButton
-                variant="blue"
-                size="xl"
+              <PlayfulButton 
+                variant="blue" 
+                size="xl" 
                 className="w-full py-10"
                 onClick={() => handleCheckIn(activeClass.id)}
               >
