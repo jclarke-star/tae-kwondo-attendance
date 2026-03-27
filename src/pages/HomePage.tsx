@@ -5,7 +5,7 @@ import { InstructorDashboard } from '@/components/InstructorDashboard';
 import { PlayfulButton } from '@/components/ui/PlayfulButton';
 import { api } from '@/lib/api-client';
 import { User } from '@shared/types';
-import { LogOut, Rocket, Settings, UserCircle, ShieldCheck, Lock, Fingerprint, Plus } from 'lucide-react';
+import { LogOut, Rocket, Settings, UserCircle, ShieldCheck, Lock, Fingerprint, Plus, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Toaster, toast } from '@/components/ui/sonner';
 import { useNavigate } from 'react-router-dom';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -21,18 +21,38 @@ export function HomePage() {
   const navigate = useNavigate();
   const [mockUsers, setMockUsers] = useState<User[]>([]);
   const [initializing, setInitializing] = useState(true);
+  const [initError, setInitError] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   const [verifying, setVerifying] = useState(false);
-  const bootstrap = useCallback(async () => {
-    try {
-      await api('/api/init');
-      await restoreSession();
-      const users = await api<User[]>('/api/users');
-      setMockUsers(users);
-    } catch (e) {
-      console.error('Init failed', e);
-    } finally {
-      setInitializing(false);
+  const bootstrap = useCallback(async (retries = 3) => {
+    setInitializing(true);
+    setInitError(null);
+    let attempt = 0;
+    while (attempt < retries) {
+      try {
+        await api('/api/init');
+        await restoreSession();
+        // Users list is secondary; don't crash the whole app if it fails
+        try {
+          const users = await api<User[]>('/api/users');
+          setMockUsers(users);
+        } catch (userErr) {
+          console.warn('Optional users fetch failed', userErr);
+        }
+        setInitializing(false);
+        return;
+      } catch (e) {
+        attempt++;
+        const message = e instanceof Error ? e.message : String(e);
+        console.error(`Init attempt ${attempt} failed:`, message);
+        if (attempt >= retries) {
+          setInitError(message);
+          setInitializing(false);
+        } else {
+          // Exponential backoff or simple delay
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+        }
+      }
     }
   }, [restoreSession]);
   useEffect(() => {
@@ -62,8 +82,30 @@ export function HomePage() {
   };
   if (initializing) {
     return (
-      <div className="max-w-md mx-auto min-h-screen flex items-center justify-center bg-white border-x-4 border-black">
+      <div className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center bg-white border-x-4 border-black gap-4">
         <Rocket className="w-12 h-12 text-kidRed animate-bounce" />
+        <p className="font-black text-xs uppercase tracking-widest animate-pulse">Initializing Dojo...</p>
+      </div>
+    );
+  }
+  if (initError) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen flex flex-col items-center justify-center bg-white border-x-4 border-black p-8 text-center gap-6">
+        <div className="bg-kidRed/10 p-4 rounded-full border-4 border-kidRed">
+          <AlertTriangle className="w-10 h-10 text-kidRed" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-black uppercase italic">Dojo Connection Failed</h2>
+          <p className="text-sm font-bold text-muted-foreground uppercase leading-tight">
+            We couldn't connect to the Tae Kwon-Do servers.
+          </p>
+          <div className="bg-slate-50 p-3 rounded-xl border-2 border-black/5 mt-4">
+            <code className="text-[10px] text-kidRed font-mono break-all">{initError}</code>
+          </div>
+        </div>
+        <PlayfulButton variant="blue" className="w-full flex gap-2" onClick={() => bootstrap()}>
+          <RefreshCw className="w-5 h-5" /> RETRY CONNECTION
+        </PlayfulButton>
       </div>
     );
   }
