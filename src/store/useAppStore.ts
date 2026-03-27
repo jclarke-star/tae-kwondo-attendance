@@ -10,8 +10,8 @@ interface AppState {
   restoreSession: () => Promise<boolean>;
   refreshUser: () => Promise<User | null>;
 }
-const STORAGE_KEY = 'taekwongo_userid';
-const SKIN_KEY = 'taekwongo_skin';
+const STORAGE_KEY = 'tkd_attendance_userid';
+const SKIN_KEY = 'tkd_attendance_skin';
 export const useAppStore = create<AppState>((set, get) => ({
   currentUser: null,
   userRole: null,

@@ -43,7 +43,7 @@ export function HomePage() {
       <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black flex items-center justify-center">
         <div className="text-center space-y-4 animate-bounce">
           <Rocket className="w-16 h-16 text-kidRed mx-auto" />
-          <p className="font-black text-xl italic">Tae Kwon-Do Attendance is Loading...</p>
+          <p className="font-black text-xl italic text-foreground">Tae Kwon-Do Attendance is Loading...</p>
         </div>
       </div>
     );
@@ -57,7 +57,9 @@ export function HomePage() {
             <div className="w-24 h-24 bg-kidRed mx-auto border-4 border-black rounded-3xl shadow-playful flex items-center justify-center -rotate-6 animate-in zoom-in duration-500">
               <Rocket className="w-12 h-12 text-white" />
             </div>
-            <h1 className="text-5xl font-black tracking-tighter italic leading-none uppercase">TaeKwonGo</h1>
+            <h1 className="text-4xl font-black tracking-tighter italic leading-none uppercase text-foreground">
+              Tae Kwon-Do Attendance
+            </h1>
             <p className="font-bold text-muted-foreground uppercase tracking-widest text-xs">Choose Your Path</p>
           </div>
           <div className="space-y-6">
@@ -91,13 +93,13 @@ export function HomePage() {
       <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black p-6 flex flex-col justify-center gap-8 animate-in slide-in-from-right duration-300">
         <button
           onClick={() => setUserRole(null)}
-          className="absolute top-6 left-6 font-black text-xs uppercase underline"
+          className="absolute top-6 left-6 font-black text-xs uppercase underline text-foreground"
         >
           Back
         </button>
         <div className="text-center space-y-4">
-          <h2 className="text-3xl font-black italic tracking-tight text-kidBlue">STUDENT PORTAL</h2>
-          <p className="font-bold text-muted-foreground">Log in to track your training!</p>
+          <h2 className="text-3xl font-black italic tracking-tight text-kidBlue uppercase">Student Portal</h2>
+          <p className="font-bold text-muted-foreground uppercase text-xs">Log in to track your training!</p>
         </div>
         <div className="space-y-4">
           <PlayfulCard color="bg-kidBlue/10" className="border-kidBlue">
@@ -118,7 +120,7 @@ export function HomePage() {
                 >
                   <span className="text-4xl">{u.avatar}</span>
                   <div className="flex-1">
-                    <p className="font-black text-lg">{u.name}</p>
+                    <p className="font-black text-lg text-foreground">{u.name}</p>
                     <p className="text-[10px] font-black text-muted-foreground uppercase">{u.belt}</p>
                   </div>
                 </button>
@@ -142,21 +144,21 @@ export function HomePage() {
            setMockUsers(users);
         }
       } catch (e) {
-        toast.error("Failed to find Master Lee");
+        toast.error("Failed to find Instructor profile");
       }
     };
     if (mockUsers.length === 0) {
       handleInstructorLogin();
       return (
-        <div className="max-w-md mx-auto min-h-screen border-x-4 border-black flex items-center justify-center font-black italic">
-          Calling Master Lee...
+        <div className="max-w-md mx-auto min-h-screen border-x-4 border-black flex items-center justify-center font-black italic text-foreground">
+          Contacting Master...
           <Toaster richColors position="top-center" />
         </div>
       );
     }
     return (
        <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black p-6 flex flex-col justify-center gap-8 animate-in slide-in-from-right duration-300">
-          <button onClick={() => setUserRole(null)} className="absolute top-6 left-6 font-black text-xs uppercase underline">Back</button>
+          <button onClick={() => setUserRole(null)} className="absolute top-6 left-6 font-black text-xs uppercase underline text-foreground">Back</button>
           <div className="text-center space-y-4">
             <h2 className="text-3xl font-black italic tracking-tight text-kidRed uppercase">Master Station</h2>
           </div>
@@ -169,7 +171,7 @@ export function HomePage() {
               >
                 <span className="text-4xl">{u.avatar}</span>
                 <div className="flex-1">
-                  <p className="font-black text-lg">{u.name}</p>
+                  <p className="font-black text-lg text-foreground">{u.name}</p>
                   <p className="text-[10px] font-black text-muted-foreground uppercase">MASTER</p>
                 </div>
               </button>
@@ -186,7 +188,9 @@ export function HomePage() {
           <div className={`${userRole === 'instructor' ? 'bg-kidRed' : 'bg-kidBlue'} p-1 rounded-lg border-2 border-black`}>
             <Rocket className="w-5 h-5 text-white" />
           </div>
-          <span className="font-black text-lg italic tracking-tighter leading-none uppercase">TaeKwonGo</span>
+          <span className="font-black text-base italic tracking-tighter leading-none uppercase text-foreground">
+            Tae Kwon-Do Attendance
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -194,15 +198,15 @@ export function HomePage() {
             className="p-2 hover:bg-black/5 rounded-xl transition-colors"
             title="Switch Role"
           >
-            <ShieldCheck className="w-6 h-6 text-muted-foreground" />
+            <ShieldCheck className="w-6 h-6 text-muted-foreground hover:text-foreground" />
           </button>
           {currentUser?.role === 'student' && (
             <button onClick={() => navigate('/settings')} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
-              <Settings className="w-6 h-6" />
+              <Settings className="w-6 h-6 text-muted-foreground hover:text-foreground" />
             </button>
           )}
           <button onClick={logout} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
-            <LogOut className="w-6 h-6" />
+            <LogOut className="w-6 h-6 text-muted-foreground hover:text-foreground" />
           </button>
         </div>
       </header>
