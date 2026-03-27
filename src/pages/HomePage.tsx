@@ -6,20 +6,24 @@ import { PlayfulButton } from '@/components/ui/PlayfulButton';
 import { PlayfulCard } from '@/components/ui/PlayfulCard';
 import { api } from '@/lib/api-client';
 import { User } from '@shared/types';
-import { LogOut, Rocket, Settings, ChevronRight, UserCircle, ShieldCheck } from 'lucide-react';
+import { LogOut, Rocket, Settings, ChevronRight, UserCircle, ShieldCheck, Lock } from 'lucide-react';
 import { Toaster, toast } from '@/components/ui/sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 export function HomePage() {
   const currentUser = useAppStore(s => s.currentUser);
   const userRole = useAppStore(s => s.userRole);
+  const isVerifiedInstructor = useAppStore(s => s.isVerifiedInstructor);
   const setCurrentUser = useAppStore(s => s.setCurrentUser);
   const setUserRole = useAppStore(s => s.setUserRole);
+  const verifyInstructor = useAppStore(s => s.verifyInstructor);
   const logout = useAppStore(s => s.logout);
   const restoreSession = useAppStore(s => s.restoreSession);
   const navigate = useNavigate();
   const location = useLocation();
   const [mockUsers, setMockUsers] = useState<User[]>([]);
   const [initializing, setInitializing] = useState(true);
+  const [pin, setPin] = useState("");
   useEffect(() => {
     const init = async () => {
       try {
@@ -38,6 +42,15 @@ export function HomePage() {
     };
     init();
   }, [restoreSession, location.search]);
+  const handleVerifyPin = () => {
+    const success = verifyInstructor(pin);
+    if (success) {
+      toast.success("Identity Verified, Master!");
+    } else {
+      toast.error("Incorrect PIN. Access Denied.");
+      setPin("");
+    }
+  };
   if (initializing) {
     return (
       <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black flex items-center justify-center">
@@ -82,6 +95,42 @@ export function HomePage() {
               <span className="text-2xl font-black italic text-black">I AM AN INSTRUCTOR</span>
             </PlayfulButton>
           </div>
+        </div>
+        <Toaster richColors position="top-center" />
+      </div>
+    );
+  }
+  // INSTRUCTOR PIN VERIFICATION
+  if (userRole === 'instructor' && !isVerifiedInstructor) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen bg-kidYellow p-6 flex flex-col items-center justify-center gap-8 animate-in slide-in-from-bottom-8 duration-500 border-x-4 border-black">
+        <div className="w-20 h-20 bg-white border-4 border-black rounded-3xl shadow-playful flex items-center justify-center mb-4">
+          <Lock className="w-10 h-10 text-kidRed" />
+        </div>
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-black italic uppercase">Master Only</h2>
+          <p className="font-bold text-black/60 uppercase text-xs">Enter your 4-digit secret PIN</p>
+        </div>
+        <div className="bg-white p-8 border-4 border-black rounded-[40px] shadow-playful-lg">
+          <InputOTP maxLength={4} value={pin} onChange={setPin} onComplete={handleVerifyPin}>
+            <InputOTPGroup className="gap-2">
+              <InputOTPSlot index={0} className="w-12 h-16 border-4 border-black rounded-xl text-2xl font-black" />
+              <InputOTPSlot index={1} className="w-12 h-16 border-4 border-black rounded-xl text-2xl font-black" />
+              <InputOTPSlot index={2} className="w-12 h-16 border-4 border-black rounded-xl text-2xl font-black" />
+              <InputOTPSlot index={3} className="w-12 h-16 border-4 border-black rounded-xl text-2xl font-black" />
+            </InputOTPGroup>
+          </InputOTP>
+        </div>
+        <div className="flex flex-col gap-4 w-full max-w-[240px]">
+          <PlayfulButton variant="red" onClick={handleVerifyPin} disabled={pin.length < 4}>
+            VERIFY IDENTITY
+          </PlayfulButton>
+          <button 
+            onClick={() => setUserRole(null)} 
+            className="font-black text-sm uppercase underline decoration-4 underline-offset-4"
+          >
+            GO BACK
+          </button>
         </div>
         <Toaster richColors position="top-center" />
       </div>
@@ -132,7 +181,7 @@ export function HomePage() {
       </div>
     );
   }
-  // INSTRUCTOR BYPASS/LOGIN
+  // INSTRUCTOR PROFILE SELECTION
   if (userRole === 'instructor' && !currentUser) {
     const handleInstructorLogin = async () => {
       try {

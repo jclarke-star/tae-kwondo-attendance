@@ -4,17 +4,23 @@ import { api } from '@/lib/api-client';
 interface AppState {
   currentUser: User | null;
   userRole: UserRole | null;
+  isVerifiedInstructor: boolean;
   setCurrentUser: (user: User | null) => void;
   setUserRole: (role: UserRole | null) => void;
+  verifyInstructor: (pin: string) => boolean;
+  clearVerification: () => void;
   logout: () => void;
   restoreSession: () => Promise<boolean>;
   refreshUser: () => Promise<User | null>;
 }
 const STORAGE_KEY = 'tkd_attendance_userid';
 const SKIN_KEY = 'tkd_attendance_skin';
+const VERIFIED_KEY = 'tkd_instructor_verified';
+const INSTRUCTOR_PIN = '1234';
 export const useAppStore = create<AppState>((set, get) => ({
   currentUser: null,
   userRole: null,
+  isVerifiedInstructor: false,
   setCurrentUser: (user) => {
     if (user && user.id) {
       localStorage.setItem(STORAGE_KEY, user.id);
@@ -29,18 +35,34 @@ export const useAppStore = create<AppState>((set, get) => ({
     } else {
       localStorage.removeItem(SKIN_KEY);
     }
-    set({ userRole: role });
+    // Clear verification if switching away from instructor or to it fresh
+    localStorage.removeItem(VERIFIED_KEY);
+    set({ userRole: role, isVerifiedInstructor: false });
+  },
+  verifyInstructor: (pin: string) => {
+    if (pin === INSTRUCTOR_PIN) {
+      localStorage.setItem(VERIFIED_KEY, 'true');
+      set({ isVerifiedInstructor: true });
+      return true;
+    }
+    return false;
+  },
+  clearVerification: () => {
+    localStorage.removeItem(VERIFIED_KEY);
+    set({ isVerifiedInstructor: false });
   },
   logout: () => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(SKIN_KEY);
-    set({ currentUser: null, userRole: null });
+    localStorage.removeItem(VERIFIED_KEY);
+    set({ currentUser: null, userRole: null, isVerifiedInstructor: false });
   },
   restoreSession: async () => {
     const userId = localStorage.getItem(STORAGE_KEY);
     const skin = localStorage.getItem(SKIN_KEY) as UserRole | null;
+    const verified = localStorage.getItem(VERIFIED_KEY) === 'true';
     if (skin) {
-      set({ userRole: skin });
+      set({ userRole: skin, isVerifiedInstructor: verified });
     }
     if (!userId) return !!skin;
     try {

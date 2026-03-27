@@ -5,6 +5,11 @@ import { ok, bad, notFound } from './core-utils';
 import { MOCK_BADGES } from "@shared/mock-data";
 import { Badge } from "@shared/types";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
+  const validateInstructor = (c: any) => {
+    const pin = c.req.header("X-Instructor-Pin");
+    if (pin !== "1234") throw new Error("Instructor PIN required");
+  };
+
   // SEED ON START
   app.get('/api/init', async (c) => {
     await UserEntity.ensureSeed(c.env);
@@ -27,6 +32,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, updated);
   });
   app.post('/api/classes/:id/approve', async (c) => {
+    try {
+      validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const { userId } = await c.req.json();
     if (!userId) return bad(c, 'userId required');
     const sessionId = c.req.param('id');
@@ -67,6 +77,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, updatedSession);
   });
   app.post('/api/classes/:id/deny', async (c) => {
+    try {
+      validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const { userId } = await c.req.json();
     if (!userId) return bad(c, 'userId required');
     const session = new ClassSessionEntity(c.env, c.req.param('id'));
@@ -74,6 +89,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, updated);
   });
   app.post('/api/classes/:id/end', async (c) => {
+    try {
+      validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const session = new ClassSessionEntity(c.env, c.req.param('id'));
     if (!await session.exists()) return notFound(c, 'class not found');
     const updated = await session.endSession();
@@ -86,6 +106,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, data.items);
   });
   app.post('/api/gradings', async (c) => {
+    try {
+      validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const body = await c.req.json();
     if (!body.title || !body.date) return bad(c, 'title and date required');
     const grading = await GradingEventEntity.create(c.env, {

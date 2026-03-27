@@ -22,10 +22,26 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 export function InstructorDashboard() {
+  const isVerifiedInstructor = useAppStore(s => s.isVerifiedInstructor);
+  const clearVerification = useAppStore(s => s.clearVerification);
+
   const [session, setSession] = useState<ClassSession | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const prevPendingIds = useRef<string[]>([]);
+
+  // Safety check
+  if (!isVerifiedInstructor) {
+    return (
+      <div className="p-12 text-center space-y-4">
+        <div className="text-6xl mb-4">🚫</div>
+        <h2 className="text-2xl font-black italic uppercase">Access Denied</h2>
+        <p className="font-bold text-muted-foreground italic">Verification required to access Master Station.</p>
+        <PlayfulButton onClick={() => window.location.reload()} variant="blue">Return to Login</PlayfulButton>
+      </div>
+    );
+  }
+
   const fetchData = useCallback(async () => {
     try {
       const [classData, userData] = await Promise.all([
@@ -51,10 +67,15 @@ export function InstructorDashboard() {
       prevPendingIds.current = currentPendingIds;
     } catch (e) {
       console.error('Instructor polling error', e);
+      if ((e as Error).message.includes('PIN')) {
+        toast.error("Security Session Expired");
+        clearVerification();
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [clearVerification]);
+
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 3000);
@@ -70,9 +91,15 @@ export function InstructorDashboard() {
       toast.success(action === 'approve' ? 'Confirmed!' : 'Denied');
       fetchData();
     } catch (e) {
-      toast.error('Operation failed');
+      if ((e as Error).message.includes('PIN')) {
+        toast.error("Instructor PIN required");
+        clearVerification();
+      } else {
+        toast.error('Operation failed');
+      }
     }
-  }, [session, fetchData]);
+  }, [session, fetchData, clearVerification]);
+
   const handleEndSession = async () => {
     if (!session) return;
     try {
@@ -80,10 +107,15 @@ export function InstructorDashboard() {
       toast.success('Mat cleared! Class finished.');
       fetchData();
     } catch (e) {
-      toast.error('Failed to end session');
+      if ((e as Error).message.includes('PIN')) {
+        toast.error("Instructor PIN required");
+        clearVerification();
+      } else {
+        toast.error('Failed to end session');
+      }
     }
   };
-  if (loading && !session) return <div className="p-20 text-center font-black italic uppercase animate-pulse">Opening Command Center...</div>;
+  if (loading && !session) return <div className="p-20 text-center font-black italic uppercase animate-pulse">Contacting Dojo...</div>;
   const pendingUsers = users.filter(u => session?.pendingCheckIns.includes(u.id));
   const confirmedUsers = users.filter(u => session?.confirmedCheckIns.includes(u.id));
   return (
