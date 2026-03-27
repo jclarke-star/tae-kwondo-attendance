@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ArrowLeft, User, Shield, Smile, ChevronRight } from 'lucide-react';
 const EMOJIS = ['🥋', '🐯', '🦈', '🐉', '🐼', '🦅', '🦁', '🔥', '⚡️', '🌟'];
-export default function SettingsPage() {
+export function SettingsPage() {
   const currentUser = useAppStore(s => s.currentUser);
   const userRole = useAppStore(s => s.userRole);
   const setCurrentUser = useAppStore(s => s.setCurrentUser);
