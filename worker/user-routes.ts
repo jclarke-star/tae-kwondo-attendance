@@ -10,33 +10,42 @@ async function hashPin(pin: string): Promise<string> {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
+async function validateInstructor(c: any) {
+  const instructorId = c.req.header("X-Instructor-Id");
+  const providedPinHash = c.req.header("X-Instructor-Pin");
+  if (!instructorId || !providedPinHash) {
+    throw new Error("Instructor credentials required");
+  }
+  const userEnt = new UserEntity(c.env, instructorId);
+  if (!(await userEnt.exists())) {
+    throw new Error("Instructor profile not found");
+  }
+  const user = await userEnt.getState();
+  if (user.role !== 'instructor') {
+    throw new Error("Unauthorized role");
+  }
+  const storedHash = user.pinHash || (await hashPin("1234"));
+  if (storedHash !== providedPinHash) {
+    throw new Error("Invalid Instructor PIN");
+  }
+}
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
-  const validateInstructor = async (c: any) => {
-    const instructorId = c.req.header("X-Instructor-Id");
-    const providedPinHash = c.req.header("X-Instructor-Pin");
-    if (!instructorId || !providedPinHash) {
-      throw new Error("Instructor credentials required");
-    }
-    const userEnt = new UserEntity(c.env, instructorId);
-    if (!await userEnt.exists()) throw new Error("Instructor profile not found");
-    const user = await userEnt.getState();
-    if (user.role !== 'instructor') throw new Error("Unauthorized role");
-    const storedHash = user.pinHash || (await hashPin("1234"));
-    if (storedHash !== providedPinHash) {
-      throw new Error("Invalid Instructor PIN");
-    }
-  };
   app.get('/api/init', async (c) => {
-    await UserEntity.ensureSeed(c.env);
-    await ClassSessionEntity.ensureSeed(c.env);
-    await GradingEventEntity.ensureSeed(c.env);
-    return ok(c, { message: 'Seeded' });
+    try {
+      await UserEntity.ensureSeed(c.env);
+      await ClassSessionEntity.ensureSeed(c.env);
+      await GradingEventEntity.ensureSeed(c.env);
+      return ok(c, { message: 'Seeded' });
+    } catch (e) {
+      console.error('[INIT ERROR]', e);
+      return bad(c, 'Failed to initialize database');
+    }
   });
   app.post('/api/auth/verify-pin', async (c) => {
     const { userId, pin } = await c.req.json();
     if (!userId || !pin) return bad(c, 'userId and pin required');
     const userEnt = new UserEntity(c.env, userId);
-    if (!await userEnt.exists()) return notFound(c, 'User not found');
+    if (!(await userEnt.exists())) return notFound(c, 'User not found');
     const user = await userEnt.getState();
     const providedHash = await hashPin(pin);
     const storedHash = user.pinHash || (await hashPin("1234"));
@@ -53,7 +62,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const userEnt = new UserEntity(c.env, userId);
     const exists = await userEnt.exists();
     let existingData = await userEnt.getState();
-    const pinHash = pin ? await hashPin(pin) : (existingData.pinHash || await hashPin("1234"));
+    const pinHash = pin ? await hashPin(pin) : (existingData.pinHash || (await hashPin("1234")));
     const instructorData = {
       ...existingData,
       id: userId,
@@ -81,12 +90,16 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const { userId } = await c.req.json();
     if (!userId) return bad(c, 'userId required');
     const session = new ClassSessionEntity(c.env, c.req.param('id'));
-    if (!await session.exists()) return notFound(c, 'class not found');
+    if (!(await session.exists())) return notFound(c, 'class not found');
     const updated = await session.checkIn(userId);
     return ok(c, updated);
   });
   app.post('/api/classes/:id/approve', async (c) => {
-    try { await validateInstructor(c); } catch (e) { return bad(c, (e as Error).message); }
+    try {
+      await validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const { userId } = await c.req.json();
     const session = new ClassSessionEntity(c.env, c.req.param('id'));
     const currentState = await session.getState();
@@ -95,16 +108,16 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!isAlreadyConfirmed) {
       const userEnt = new UserEntity(c.env, userId);
       if (await userEnt.exists()) {
-        await userEnt.mutate(u => {
+        await userEnt.mutate((u) => {
           const nextTotal = (u.totalSessions ?? 0) + 1;
           const nextStreak = (u.streak ?? 0) + 1;
           const newBadges = [...(u.badges ?? [])];
-          if (nextTotal === 5 && !newBadges.some(b => b.id === 'b3')) {
-            const b = MOCK_BADGES.find(x => x.id === 'b3');
+          if (nextTotal === 5 && !newBadges.some((b) => b.id === 'b3')) {
+            const b = MOCK_BADGES.find((x) => x.id === 'b3');
             if (b) newBadges.push(b);
           }
-          if (nextTotal === 10 && !newBadges.some(b => b.id === 'b2')) {
-            const b = MOCK_BADGES.find(x => x.id === 'b2');
+          if (nextTotal === 10 && !newBadges.some((b) => b.id === 'b2')) {
+            const b = MOCK_BADGES.find((x) => x.id === 'b2');
             if (b) newBadges.push(b);
           }
           return { ...u, totalSessions: nextTotal, streak: nextStreak, badges: newBadges };
@@ -114,14 +127,22 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, updatedSession);
   });
   app.post('/api/classes/:id/deny', async (c) => {
-    try { await validateInstructor(c); } catch (e) { return bad(c, (e as Error).message); }
+    try {
+      await validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const { userId } = await c.req.json();
     const session = new ClassSessionEntity(c.env, c.req.param('id'));
     const updated = await session.denyCheckIn(userId);
     return ok(c, updated);
   });
   app.post('/api/classes/:id/end', async (c) => {
-    try { await validateInstructor(c); } catch (e) { return bad(c, (e as Error).message); }
+    try {
+      await validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const session = new ClassSessionEntity(c.env, c.req.param('id'));
     const updated = await session.endSession();
     return ok(c, updated);
@@ -131,7 +152,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, data.items);
   });
   app.post('/api/gradings', async (c) => {
-    try { await validateInstructor(c); } catch (e) { return bad(c, (e as Error).message); }
+    try {
+      await validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const body = await c.req.json();
     const grading = await GradingEventEntity.create(c.env, { ...body, id: crypto.randomUUID() });
     return ok(c, grading);
@@ -143,7 +168,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   app.get('/api/users/:id', async (c) => {
     const ent = new UserEntity(c.env, c.req.param('id'));
-    if (!await ent.exists()) return notFound(c);
+    if (!(await ent.exists())) return notFound(c);
     return ok(c, await ent.getState());
   });
   app.post('/api/users/register', async (c) => {
@@ -167,7 +192,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       await UserEntity.create(c.env, newUser);
       return ok(c, newUser);
     } else {
-      const updated = await ent.mutate(u => ({
+      const updated = await ent.mutate((u) => ({
         ...u,
         name: body.name || u.name,
         belt: body.belt || u.belt,
@@ -179,21 +204,40 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     }
   });
   app.post('/api/users/:id/promote', async (c) => {
-    try { await validateInstructor(c); } catch (e) { return bad(c, (e as Error).message); }
+    try {
+      await validateInstructor(c);
+    } catch (e) {
+      return bad(c, (e as Error).message);
+    }
     const userId = c.req.param('id');
     const userEnt = new UserEntity(c.env, userId);
-    if (!await userEnt.exists()) return notFound(c, 'Student not found');
-    const updated = await userEnt.mutate(u => {
-      const currentIndex = BELT_ORDER.findIndex(b => b === u.belt);
-      if (currentIndex === -1 || currentIndex === BELT_ORDER.length - 1) return u;
-      const nextBelt = BELT_ORDER[currentIndex + 1];
-      console.log(`[PROMOTION] Promoting ${u.name} to ${nextBelt}`);
-      return {
-        ...u,
-        belt: nextBelt,
-        totalSessions: 0 // Reset progress cycle for new belt
-      };
-    });
-    return ok(c, updated);
+    if (!(await userEnt.exists())) return notFound(c, 'Student not found');
+    try {
+      const updated = await userEnt.mutate((u) => {
+        const currentBeltStr = u.belt || "White Belt";
+        const currentIndex = BELT_ORDER.findIndex(
+          (b) => b.toLowerCase() === currentBeltStr.toLowerCase()
+        );
+        if (currentIndex === -1) {
+          console.warn(`[PROMOTION] Rank not found in BELT_ORDER: ${currentBeltStr}`);
+          return u;
+        }
+        if (currentIndex === BELT_ORDER.length - 1) {
+          console.info(`[PROMOTION] ${u.name} is already at maximum rank.`);
+          return u;
+        }
+        const nextBelt = BELT_ORDER[currentIndex + 1];
+        console.log(`[PROMOTION] Promoting ${u.name} from ${currentBeltStr} to ${nextBelt}`);
+        return {
+          ...u,
+          belt: nextBelt,
+          totalSessions: 0 // Reset progress cycle for new belt
+        };
+      });
+      return ok(c, updated);
+    } catch (e) {
+      console.error('[PROMOTION ERROR]', e);
+      return bad(c, 'Promotion failed during database update');
+    }
   });
 }
