@@ -34,7 +34,9 @@ export function InstructorDashboard() {
           const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
           audio.volume = 0.3;
           audio.play();
-        } catch (e) {}
+        } catch (e) {
+          /* browsers block autoplay without interaction */
+        }
       }
       prevPendingCount.current = pendingCount;
     } catch (e) {
@@ -48,7 +50,7 @@ export function InstructorDashboard() {
     const interval = setInterval(fetchData, 3000); // Fast poll for instructors
     return () => clearInterval(interval);
   }, [fetchData]);
-  const handleAction = async (userId: string, action: 'approve' | 'deny') => {
+  const handleAction = useCallback(async (userId: string, action: 'approve' | 'deny') => {
     if (!session) return;
     try {
       await api(`/api/classes/${session.id}/${action}`, {
@@ -60,7 +62,7 @@ export function InstructorDashboard() {
     } catch (e) {
       toast.error('Action failed');
     }
-  };
+  }, [session, fetchData]);
   if (loading && !session) return <div className="p-8 text-center font-black">LOADING COMMAND CENTER...</div>;
   const pendingUsers = users.filter(u => session?.pendingCheckIns.includes(u.id));
   const confirmedUsers = users.filter(u => session?.confirmedCheckIns.includes(u.id));
