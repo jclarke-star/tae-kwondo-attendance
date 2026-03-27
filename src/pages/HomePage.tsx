@@ -7,7 +7,7 @@ import { PlayfulCard } from '@/components/ui/PlayfulCard';
 import { api } from '@/lib/api-client';
 import { User } from '@shared/types';
 import { LogOut, Rocket, Settings, ChevronRight, UserCircle, ShieldCheck } from 'lucide-react';
-import { Toaster } from '@/components/ui/sonner';
+import { Toaster, toast } from '@/components/ui/sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 export function HomePage() {
   const currentUser = useAppStore(s => s.currentUser);
@@ -61,18 +61,18 @@ export function HomePage() {
             <p className="font-bold text-muted-foreground uppercase tracking-widest text-xs">Choose Your Path</p>
           </div>
           <div className="space-y-6">
-            <PlayfulButton 
-              variant="blue" 
-              size="xl" 
+            <PlayfulButton
+              variant="blue"
+              size="xl"
               className="w-full py-12 flex-col h-auto"
               onClick={() => setUserRole('student')}
             >
               <UserCircle className="w-8 h-8 mb-2" />
               <span className="text-2xl font-black italic">I AM A STUDENT</span>
             </PlayfulButton>
-            <PlayfulButton 
-              variant="yellow" 
-              size="xl" 
+            <PlayfulButton
+              variant="yellow"
+              size="xl"
               className="w-full py-12 flex-col h-auto"
               onClick={() => setUserRole('instructor')}
             >
@@ -89,7 +89,7 @@ export function HomePage() {
   if (userRole === 'student' && !currentUser) {
     return (
       <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black p-6 flex flex-col justify-center gap-8 animate-in slide-in-from-right duration-300">
-        <button 
+        <button
           onClick={() => setUserRole(null)}
           className="absolute top-6 left-6 font-black text-xs uppercase underline"
         >
@@ -132,14 +132,13 @@ export function HomePage() {
   }
   // INSTRUCTOR BYPASS/LOGIN
   if (userRole === 'instructor' && !currentUser) {
-    // For demo, we auto-log in as the instructor if we find one
     const handleInstructorLogin = async () => {
       try {
         const users = await api<User[]>('/api/users');
         const instructor = users.find(u => u.role === 'instructor');
-        if (instructor) setCurrentUser(instructor);
-        else {
-           // Fallback to mock login UI if no instructor found in DB
+        if (instructor) {
+          setCurrentUser(instructor);
+        } else {
            setMockUsers(users);
         }
       } catch (e) {
@@ -148,7 +147,12 @@ export function HomePage() {
     };
     if (mockUsers.length === 0) {
       handleInstructorLogin();
-      return <div className="max-w-md mx-auto min-h-screen border-x-4 border-black flex items-center justify-center font-black italic">Calling Master Lee...</div>;
+      return (
+        <div className="max-w-md mx-auto min-h-screen border-x-4 border-black flex items-center justify-center font-black italic">
+          Calling Master Lee...
+          <Toaster richColors position="top-center" />
+        </div>
+      );
     }
     return (
        <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black p-6 flex flex-col justify-center gap-8 animate-in slide-in-from-right duration-300">
@@ -171,6 +175,7 @@ export function HomePage() {
               </button>
             ))}
           </div>
+          <Toaster richColors position="top-center" />
        </div>
     );
   }
@@ -184,8 +189,8 @@ export function HomePage() {
           <span className="font-black text-lg italic tracking-tighter leading-none uppercase">TaeKwonGo</span>
         </div>
         <div className="flex items-center gap-1">
-          <button 
-            onClick={() => setUserRole(null)} 
+          <button
+            onClick={() => setUserRole(null)}
             className="p-2 hover:bg-black/5 rounded-xl transition-colors"
             title="Switch Role"
           >

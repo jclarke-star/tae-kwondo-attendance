@@ -7,13 +7,13 @@ interface BeltProgressProps {
   currentBelt: string;
   totalSessions: number;
 }
-export function BeltProgress({ currentBelt, totalSessions }: BeltProgressProps) {
-  const currentIndex = BELT_ORDER.indexOf(currentBelt);
-  const nextBelt = currentIndex !== -1 && currentIndex < BELT_ORDER.length - 1 
-    ? BELT_ORDER[currentIndex + 1] 
+export function BeltProgress({ currentBelt, totalSessions = 0 }: BeltProgressProps) {
+  // Safe lookup for current index
+  const currentIndex = BELT_ORDER.findIndex(b => b.toLowerCase() === currentBelt.toLowerCase());
+  const nextBelt = currentIndex !== -1 && currentIndex < BELT_ORDER.length - 1
+    ? BELT_ORDER[currentIndex + 1]
     : "Master Level";
   // Logic: Every 10 sessions is a "milestone" towards the next belt
-  // If Master Level, keep at 100% or show a different state
   const isMaster = nextBelt === "Master Level";
   const progressToNext = isMaster ? 100 : (totalSessions % 10) * 10;
   const getBeltColor = (beltName: string) => {
@@ -30,7 +30,7 @@ export function BeltProgress({ currentBelt, totalSessions }: BeltProgressProps) 
       <div className="flex justify-between items-end px-1">
         <div>
           <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest text-left">Current Rank</p>
-          <p className="text-lg font-black italic">{currentBelt}</p>
+          <p className="text-lg font-black italic">{currentBelt || "Novice"}</p>
         </div>
         <div className="text-right">
           <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Next Goal</p>
@@ -45,7 +45,7 @@ export function BeltProgress({ currentBelt, totalSessions }: BeltProgressProps) 
           transition={{ type: "spring", stiffness: 80, damping: 12 }}
           className={cn("absolute inset-y-0 left-0", isMaster ? "bg-kidYellow" : "bg-kidGreen")}
         />
-        {/* Belt Visual */}
+        {/* Belt Visuals for Progress Bar context */}
         <div className="absolute inset-0 flex items-center justify-around px-4 pointer-events-none">
           <div className={cn("w-12 h-4 border-2 border-black rounded-sm shadow-sm", getBeltColor(currentBelt))} />
           <div className="flex-1 mx-4 h-[2px] bg-black/10" />
@@ -72,14 +72,17 @@ export function BeltProgress({ currentBelt, totalSessions }: BeltProgressProps) 
           </div>
         </div>
         <div className="flex -space-x-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className={cn(
-              "w-6 h-6 rounded-full border-2 border-black flex items-center justify-center transition-colors",
-              isMaster || i <= (totalSessions % 10) / 3 ? "bg-kidYellow" : "bg-white"
-            )}>
-              <Star className={cn("w-3 h-3 transition-colors", isMaster || i <= (totalSessions % 10) / 3 ? "fill-black" : "text-black/20")} />
-            </div>
-          ))}
+          {[1, 2, 3].map((i) => {
+            const isActive = isMaster || i <= (totalSessions % 10) / 3;
+            return (
+              <div key={i} className={cn(
+                "w-6 h-6 rounded-full border-2 border-black flex items-center justify-center transition-colors",
+                isActive ? "bg-kidYellow" : "bg-white"
+              )}>
+                <Star className={cn("w-3 h-3 transition-colors", isActive ? "fill-black" : "text-black/20")} />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

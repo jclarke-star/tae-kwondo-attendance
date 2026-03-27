@@ -36,20 +36,26 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const userEnt = new UserEntity(c.env, userId);
     if (await userEnt.exists()) {
       await userEnt.mutate(u => {
-        const nextTotal = (u.totalSessions || 0) + 1;
-        const nextStreak = (u.streak || 0) + 1;
-        const newBadges = [...(u.badges || [])];
+        const nextTotal = (u.totalSessions ?? 0) + 1;
+        const nextStreak = (u.streak ?? 0) + 1;
+        const currentBadges = u.badges ?? [];
+        const newBadges = [...currentBadges];
         // Award Attendance Pro at 5 sessions
-        if (nextTotal === 5 && !newBadges.find((b: Badge) => b.id === 'b3')) {
+        if (nextTotal === 5 && !newBadges.some((b: Badge) => b.id === 'b3')) {
           const badge = MOCK_BADGES.find((b: Badge) => b.id === 'b3');
           if (badge) newBadges.push(badge);
         }
         // Award Power Kicker at 10 sessions
-        if (nextTotal === 10 && !newBadges.find((b: Badge) => b.id === 'b2')) {
+        if (nextTotal === 10 && !newBadges.some((b: Badge) => b.id === 'b2')) {
           const badge = MOCK_BADGES.find((b: Badge) => b.id === 'b2');
           if (badge) newBadges.push(badge);
         }
-        return { ...u, totalSessions: nextTotal, streak: nextStreak, badges: newBadges };
+        return { 
+          ...u, 
+          totalSessions: nextTotal, 
+          streak: nextStreak, 
+          badges: newBadges 
+        };
       });
     }
     return ok(c, updatedSession);
@@ -104,7 +110,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
       }
     }
     const id = crypto.randomUUID();
-    const newUser = {
+    const newUser: UserEntity['state'] = {
       id,
       name: body.name,
       belt: body.belt,
