@@ -50,6 +50,13 @@ export class ClassSessionEntity extends IndexedEntity<ClassSession> {
       pendingCheckIns: s.pendingCheckIns.filter(id => id !== userId)
     }));
   }
+  async endSession(): Promise<ClassSession> {
+    return this.mutate(s => ({
+      ...s,
+      pendingCheckIns: [],
+      confirmedCheckIns: []
+    }));
+  }
 }
 export class GradingEventEntity extends IndexedEntity<GradingEvent> {
   static readonly entityName = "grading_event";

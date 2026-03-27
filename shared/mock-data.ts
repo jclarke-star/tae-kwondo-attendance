@@ -22,9 +22,9 @@ export const MOCK_BADGES: Badge[] = [
 export const MOCK_USERS: User[] = [
   {
     id: 'u-instructor',
-    name: 'Master Lee',
+    name: 'Mischa 2nd Degree',
     role: 'instructor',
-    belt: 'Black Belt (9th Dan)',
+    belt: 'Black Belt (2nd Dan)',
     avatar: '🥋',
     totalSessions: 100,
     streak: 0,

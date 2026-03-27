@@ -67,6 +67,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const updated = await session.denyCheckIn(userId);
     return ok(c, updated);
   });
+  app.post('/api/classes/:id/end', async (c) => {
+    const session = new ClassSessionEntity(c.env, c.req.param('id'));
+    if (!await session.exists()) return notFound(c, 'class not found');
+    const updated = await session.endSession();
+    return ok(c, updated);
+  });
   // GRADINGS
   app.get('/api/gradings', async (c) => {
     await GradingEventEntity.ensureSeed(c.env);

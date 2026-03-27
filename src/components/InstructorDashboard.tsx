@@ -5,11 +5,22 @@ import { PlayfulCard } from '@/components/ui/PlayfulCard';
 import { GradingManager } from '@/components/GradingManager';
 import { api } from '@/lib/api-client';
 import { ClassSession, User } from '@shared/types';
-import { Check, X, Users, ShieldCheck, Hourglass, ClipboardList, CalendarDays, BellRing, Sparkles } from 'lucide-react';
+import { Check, X, Users, ShieldCheck, Hourglass, ClipboardList, CalendarDays, BellRing, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 export function InstructorDashboard() {
   const [session, setSession] = useState<ClassSession | null>(null);
   const [users, setUsers] = useState<User[]>([]);
@@ -62,6 +73,16 @@ export function InstructorDashboard() {
       toast.error('Operation failed');
     }
   }, [session, fetchData]);
+  const handleEndSession = async () => {
+    if (!session) return;
+    try {
+      await api(`/api/classes/${session.id}/end`, { method: 'POST' });
+      toast.success('Mat cleared! Class finished.');
+      fetchData();
+    } catch (e) {
+      toast.error('Failed to end session');
+    }
+  };
   if (loading && !session) return <div className="p-20 text-center font-black italic uppercase animate-pulse">Opening Command Center...</div>;
   const pendingUsers = users.filter(u => session?.pendingCheckIns.includes(u.id));
   const confirmedUsers = users.filter(u => session?.confirmedCheckIns.includes(u.id));
@@ -172,6 +193,37 @@ export function InstructorDashboard() {
               </AnimatePresence>
             </div>
           </div>
+          {(confirmedUsers.length > 0 || pendingUsers.length > 0) && (
+            <div className="pt-10 flex justify-center">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <PlayfulButton variant="red" size="lg" className="w-full max-w-xs flex gap-2">
+                    <Trash2 className="w-5 h-5" />
+                    END SESSION
+                  </PlayfulButton>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="border-4 border-black rounded-[40px]">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-2xl font-black italic uppercase">FINISH CLASS?</AlertDialogTitle>
+                    <AlertDialogDescription className="font-bold text-muted-foreground italic">
+                      This will clear the active student roster. Students can check in again next time!
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="mt-4 gap-4">
+                    <AlertDialogCancel className="border-4 border-black rounded-2xl font-black shadow-playful-sm active:translate-y-0.5 transition-all">
+                      NOT YET
+                    </AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleEndSession}
+                      className="bg-kidRed text-white border-4 border-black rounded-2xl font-black shadow-playful-sm active:translate-y-0.5 transition-all hover:bg-kidRed"
+                    >
+                      CLEAR MAT
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
         </TabsContent>
         <TabsContent value="gradings" className="mt-8">
           <GradingManager />
