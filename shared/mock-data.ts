@@ -1,4 +1,24 @@
-import type { User, ClassSession, GradingEvent } from './types';
+import type { User, ClassSession, GradingEvent, Badge } from './types';
+export const MOCK_BADGES: Badge[] = [
+  {
+    id: 'b1',
+    name: 'Early Bird',
+    icon: '🌅',
+    description: 'Checked in 5 minutes before class started!'
+  },
+  {
+    id: 'b2',
+    name: 'Power Kicker',
+    icon: '💥',
+    description: 'Completed 10 classes in a row.'
+  },
+  {
+    id: 'b3',
+    name: 'Attendance Pro',
+    icon: '🏆',
+    description: 'Reached a 5-day training streak!'
+  }
+];
 export const MOCK_USERS: User[] = [
   {
     id: 'u-instructor',
@@ -6,7 +26,9 @@ export const MOCK_USERS: User[] = [
     role: 'instructor',
     belt: 'Black Belt (9th Dan)',
     avatar: '🥋',
-    totalSessions: 100
+    totalSessions: 100,
+    streak: 0,
+    badges: []
   },
   {
     id: 'u-timmy',
@@ -14,7 +36,9 @@ export const MOCK_USERS: User[] = [
     role: 'student',
     belt: 'White Belt',
     avatar: '🐯',
-    totalSessions: 12
+    totalSessions: 12,
+    streak: 3,
+    badges: [MOCK_BADGES[0]]
   },
   {
     id: 'u-sarah',
@@ -22,7 +46,9 @@ export const MOCK_USERS: User[] = [
     role: 'student',
     belt: 'Yellow Belt',
     avatar: '🦈',
-    totalSessions: 25
+    totalSessions: 25,
+    streak: 5,
+    badges: [MOCK_BADGES[0], MOCK_BADGES[2]]
   }
 ];
 export const MOCK_CLASSES: ClassSession[] = [

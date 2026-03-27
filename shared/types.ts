@@ -4,6 +4,12 @@ export interface ApiResponse<T = unknown> {
   error?: string;
 }
 export type UserRole = 'student' | 'instructor';
+export interface Badge {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+}
 export interface User {
   id: string;
   name: string;
@@ -11,6 +17,8 @@ export interface User {
   belt: string;
   avatar: string;
   totalSessions?: number;
+  streak: number;
+  badges: Badge[];
 }
 export interface ClassSession {
   id: string;
