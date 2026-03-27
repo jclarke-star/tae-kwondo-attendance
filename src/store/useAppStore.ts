@@ -6,12 +6,13 @@ interface AppState {
   setCurrentUser: (user: User | null) => void;
   logout: () => void;
   restoreSession: () => Promise<boolean>;
+  refreshUser: () => Promise<User | null>;
 }
 const STORAGE_KEY = 'taekwongo_userid';
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   currentUser: null,
   setCurrentUser: (user) => {
-    if (user) {
+    if (user && user.id) {
       localStorage.setItem(STORAGE_KEY, user.id);
     } else {
       localStorage.removeItem(STORAGE_KEY);
@@ -31,14 +32,27 @@ export const useAppStore = create<AppState>((set) => ({
         set({ currentUser: user });
         return true;
       }
-      // If user data is invalid, clear storage
       localStorage.removeItem(STORAGE_KEY);
       return false;
     } catch (e) {
-      // Clear storage on 404 or network error to avoid stuck sessions
       localStorage.removeItem(STORAGE_KEY);
       set({ currentUser: null });
       return false;
+    }
+  },
+  refreshUser: async () => {
+    const user = get().currentUser;
+    if (!user?.id) return null;
+    try {
+      const updatedUser = await api<User>(`/api/users/${user.id}`);
+      // Only update if something changed to prevent unnecessary re-renders
+      if (JSON.stringify(updatedUser) !== JSON.stringify(user)) {
+        set({ currentUser: updatedUser });
+      }
+      return updatedUser;
+    } catch (e) {
+      console.error('Failed to refresh user', e);
+      return null;
     }
   }
 }));

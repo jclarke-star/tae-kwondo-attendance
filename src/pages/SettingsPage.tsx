@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { PlayfulButton } from '@/components/ui/PlayfulButton';
 import { PlayfulCard } from '@/components/ui/PlayfulCard';
-import { BELT_ORDER } from '@shared/types';
+import { BELT_ORDER, User as UserType } from '@shared/types';
 import { api } from '@/lib/api-client';
 import { useNavigate, Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -16,7 +16,6 @@ export function SettingsPage() {
   const [belt, setBelt] = useState(BELT_ORDER[0]);
   const [avatar, setAvatar] = useState('🥋');
   const [saving, setSaving] = useState(false);
-  // Pre-fill if editing existing user
   useEffect(() => {
     if (currentUser) {
       setName(currentUser.name);
@@ -31,12 +30,17 @@ export function SettingsPage() {
     }
     setSaving(true);
     try {
-      const user = await api<any>('/api/users/register', {
+      const user = await api<UserType>('/api/users/register', {
         method: 'POST',
-        body: JSON.stringify({ name, belt, avatar })
+        body: JSON.stringify({ 
+          id: currentUser?.id, // Pass ID if it exists to update instead of create
+          name, 
+          belt, 
+          avatar 
+        })
       });
       setCurrentUser(user);
-      toast.success("Profile saved! KI-YAH!");
+      toast.success(currentUser ? "Profile updated! KI-YAH!" : "Profile created! KI-YAH!");
       navigate('/');
     } catch (e) {
       toast.error("Save failed. Try again!");
@@ -50,7 +54,9 @@ export function SettingsPage() {
         <button onClick={() => navigate(-1)} className="p-2 hover:bg-black/5 rounded-xl transition-colors">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-xl font-black uppercase tracking-tight">Student Profile</h1>
+        <h1 className="text-xl font-black uppercase tracking-tight">
+          {currentUser ? 'Edit Profile' : 'New Profile'}
+        </h1>
         <div className="w-10" />
       </header>
       <main className="p-6 space-y-8 py-8 md:py-10">
@@ -67,7 +73,11 @@ export function SettingsPage() {
               <button
                 key={e}
                 onClick={() => setAvatar(e)}
-                className={`text-2xl p-2 rounded-xl border-2 transition-all active:scale-90 ${avatar === e ? 'bg-kidBlue border-black scale-110 shadow-playful-sm' : 'bg-white border-transparent hover:border-black/20'}`}
+                className={`text-2xl p-2 rounded-xl border-2 transition-all active:scale-90 ${
+                  avatar === e 
+                    ? 'bg-kidBlue border-black scale-110 shadow-playful-sm text-white' 
+                    : 'bg-white border-black/10 hover:border-black'
+                }`}
               >
                 {e}
               </button>
@@ -108,15 +118,15 @@ export function SettingsPage() {
           disabled={saving}
           onClick={handleSave}
         >
-          {saving ? 'SAVING...' : 'SAVE PROFILE'}
+          {saving ? 'SAVING...' : currentUser ? 'UPDATE PROFILE' : 'CREATE PROFILE'}
         </PlayfulButton>
         {!currentUser && (
           <div className="pt-8 border-t-2 border-black/5 text-center space-y-4">
             <p className="text-xs font-bold text-muted-foreground px-4">
               Need to test as a different user?
             </p>
-            <Link 
-              to="/?demo=true" 
+            <Link
+              to="/?demo=true"
               className="inline-flex items-center gap-1 font-black text-sm text-kidBlue hover:underline"
             >
               SWITCH TO DEMO ACCOUNTS <ChevronRight className="w-4 h-4" />

@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 export function StudentDashboard() {
   const currentUser = useAppStore(s => s.currentUser);
-  const setCurrentUser = useAppStore(s => s.setCurrentUser);
+  const refreshUser = useAppStore(s => s.refreshUser);
   const [classes, setClasses] = useState<ClassSession[]>([]);
   const [gradings, setGradings] = useState<GradingEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,29 +21,27 @@ export function StudentDashboard() {
   const fetchData = useCallback(async () => {
     if (!currentUser?.id) return;
     try {
-      const [classData, gradingData, userData] = await Promise.all([
+      const [classData, gradingData, updatedUser] = await Promise.all([
         api<ClassSession[]>('/api/classes'),
         api<GradingEvent[]>('/api/gradings'),
-        api<User[]>('/api/users')
+        refreshUser()
       ]);
       setClasses(classData);
       setGradings(gradingData);
-      const updatedMe = userData.find(u => u.id === currentUser.id);
-      if (updatedMe) {
+      if (updatedUser) {
         const activeClass = classData[0];
-        const currentStatus = activeClass?.confirmedCheckIns.includes(updatedMe.id) ? 'confirmed' : 'pending';
+        const currentStatus = activeClass?.confirmedCheckIns.includes(updatedUser.id) ? 'confirmed' : 'pending';
         if (prevStatusRef.current === 'pending' && currentStatus === 'confirmed') {
           setShowCelebration(true);
         }
         prevStatusRef.current = currentStatus;
-        setCurrentUser(updatedMe);
       }
     } catch (e) {
-      console.error(e);
+      console.error('Polling error', e);
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.id, setCurrentUser]);
+  }, [currentUser?.id, refreshUser]);
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 5000);
@@ -102,8 +100,8 @@ export function StudentDashboard() {
           <h3 className="text-2xl font-black px-2 flex items-center gap-2">
             <Star className="w-6 h-6 text-kidYellow" /> TRAINING TODAY
           </h3>
-          <PlayfulCard className="space-y-6">
-            <div className="flex justify-between items-center">
+          <PlayfulCard className="space-y-6 min-h-[160px] flex flex-col justify-center">
+            <div className="flex justify-between items-center mb-4">
               <div>
                 <p className="text-xl font-black">{activeClass.title}</p>
                 <p className="font-bold text-kidBlue">Ready for class?</p>

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { UserEntity, ClassSessionEntity, GradingEventEntity } from "./entities";
 import { ok, bad, notFound } from './core-utils';
-import { MOCK_BADGES } from "@shared/mock-data";
+import { MOCK_BADGES } from "@shared/types";
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // SEED ON START
   app.get('/api/init', async (c) => {
@@ -87,6 +87,19 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.post('/api/users/register', async (c) => {
     const body = await c.req.json();
     if (!body.name || !body.belt) return bad(c, 'name and belt required');
+    const existingId = body.id;
+    if (existingId) {
+      const ent = new UserEntity(c.env, existingId);
+      if (await ent.exists()) {
+        const updated = await ent.mutate(u => ({
+          ...u,
+          name: body.name,
+          belt: body.belt,
+          avatar: body.avatar || u.avatar
+        }));
+        return ok(c, updated);
+      }
+    }
     const id = crypto.randomUUID();
     const newUser = {
       id,
