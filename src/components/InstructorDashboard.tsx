@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { PlayfulButton } from '@/components/ui/PlayfulButton';
 import { PlayfulCard } from '@/components/ui/PlayfulCard';
@@ -12,7 +12,7 @@ export function InstructorDashboard() {
   const [session, setSession] = useState<ClassSession | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [classData, userData] = await Promise.all([
         api<ClassSession[]>('/api/classes'),
@@ -25,8 +25,10 @@ export function InstructorDashboard() {
     } finally {
       setLoading(false);
     }
-  };
-  useEffect(() => { fetchData(); }, []);
+  }, []);
+  useEffect(() => { 
+    fetchData(); 
+  }, [fetchData]);
   const handleAction = async (userId: string, action: 'approve' | 'deny') => {
     if (!session) return;
     try {
@@ -56,14 +58,14 @@ export function InstructorDashboard() {
       </div>
       <Tabs defaultValue="attendance" className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-transparent gap-2 h-auto">
-          <TabsTrigger 
-            value="attendance" 
+          <TabsTrigger
+            value="attendance"
             className="border-4 border-black rounded-xl font-black data-[state=active]:bg-kidBlue data-[state=active]:text-white shadow-playful data-[state=active]:shadow-none data-[state=active]:translate-y-1 py-3"
           >
             <ClipboardList className="w-4 h-4 mr-2" /> ATTENDANCE
           </TabsTrigger>
-          <TabsTrigger 
-            value="gradings" 
+          <TabsTrigger
+            value="gradings"
             className="border-4 border-black rounded-xl font-black data-[state=active]:bg-kidYellow data-[state=active]:text-black shadow-playful data-[state=active]:shadow-none data-[state=active]:translate-y-1 py-3"
           >
             <CalendarDays className="w-4 h-4 mr-2" /> GRADINGS

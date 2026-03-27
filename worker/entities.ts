@@ -4,7 +4,15 @@ import { MOCK_USERS, MOCK_CLASSES, MOCK_GRADING_EVENTS } from "@shared/mock-data
 export class UserEntity extends IndexedEntity<User> {
   static readonly entityName = "user";
   static readonly indexName = "users";
-  static readonly initialState: User = { id: "", name: "", role: "student", belt: "", avatar: "" };
+  static readonly initialState: User = { 
+    id: "", 
+    name: "", 
+    role: "student", 
+    belt: "", 
+    avatar: "",
+    streak: 0,
+    badges: []
+  };
   static seedData = MOCK_USERS;
 }
 export class ClassSessionEntity extends IndexedEntity<ClassSession> {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { PlayfulButton } from '@/components/ui/PlayfulButton';
 import { PlayfulCard } from '@/components/ui/PlayfulCard';
@@ -18,7 +18,7 @@ export function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [classData, gradingData, userData] = await Promise.all([
         api<ClassSession[]>('/api/classes'),
@@ -44,12 +44,12 @@ export function StudentDashboard() {
     } finally {
       setLoading(false);
     }
-  };
-  useEffect(() => { 
+  }, [currentUser?.id, setCurrentUser]);
+  useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 5000); // Polling for approval
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
   const handleCheckIn = async (classId: string) => {
     if (!currentUser) return;
     try {
@@ -75,9 +75,9 @@ export function StudentDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {showCelebration && (
-        <Celebration 
-          text="KI-YAH! CONFIRMED!" 
-          onComplete={() => setShowCelebration(false)} 
+        <Celebration
+          text="KI-YAH! CONFIRMED!"
+          onComplete={() => setShowCelebration(false)}
         />
       )}
       <PlayfulCard className="text-center relative overflow-hidden pt-10">
@@ -88,9 +88,9 @@ export function StudentDashboard() {
         <div className="text-7xl mb-2 drop-shadow-[4px_4px_0px_rgba(0,0,0,1)]">{currentUser?.avatar}</div>
         <h2 className="text-4xl font-black tracking-tight">{currentUser?.name}</h2>
         <div className="mt-4 mb-6">
-          <BeltProgress 
-            currentBelt={currentUser?.belt || "White Belt"} 
-            totalSessions={currentUser?.totalSessions || 0} 
+          <BeltProgress
+            currentBelt={currentUser?.belt || "White Belt"}
+            totalSessions={currentUser?.totalSessions || 0}
           />
         </div>
       </PlayfulCard>
