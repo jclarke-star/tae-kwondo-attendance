@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
-import { UserEntity, ClassSessionEntity } from "./entities";
+import { UserEntity, ClassSessionEntity, GradingEventEntity } from "./entities";
 import { ok, bad, notFound } from './core-utils';
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // SEED ON START
   app.get('/api/init', async (c) => {
     await UserEntity.ensureSeed(c.env);
     await ClassSessionEntity.ensureSeed(c.env);
+    await GradingEventEntity.ensureSeed(c.env);
     return ok(c, { message: 'Seeded' });
   });
   // CLASSES
@@ -37,6 +38,21 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const session = new ClassSessionEntity(c.env, c.req.param('id'));
     const updated = await session.denyCheckIn(userId);
     return ok(c, updated);
+  });
+  // GRADINGS
+  app.get('/api/gradings', async (c) => {
+    await GradingEventEntity.ensureSeed(c.env);
+    const data = await GradingEventEntity.list(c.env);
+    return ok(c, data.items);
+  });
+  app.post('/api/gradings', async (c) => {
+    const body = await c.req.json();
+    if (!body.title || !body.date) return bad(c, 'title and date required');
+    const grading = await GradingEventEntity.create(c.env, {
+      ...body,
+      id: crypto.randomUUID()
+    });
+    return ok(c, grading);
   });
   // USERS
   app.get('/api/users', async (c) => {

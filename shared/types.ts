@@ -10,6 +10,7 @@ export interface User {
   role: UserRole;
   belt: string;
   avatar: string;
+  totalSessions?: number;
 }
 export interface ClassSession {
   id: string;
@@ -19,3 +20,19 @@ export interface ClassSession {
   pendingCheckIns: string[]; // User IDs
   confirmedCheckIns: string[]; // User IDs
 }
+export interface GradingEvent {
+  id: string;
+  title: string;
+  date: string; // ISO string
+  description: string;
+  targetBelts: string[]; // Belts eligible for this grading
+}
+export const BELT_ORDER = [
+  "White Belt",
+  "Yellow Belt",
+  "Green Belt",
+  "Blue Belt",
+  "Red Belt",
+  "Black Belt (1st Dan)",
+  "Black Belt (2nd Dan)"
+];

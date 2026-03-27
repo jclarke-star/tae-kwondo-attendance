@@ -13,14 +13,31 @@ export function HomePage() {
   const setCurrentUser = useAppStore(s => s.setCurrentUser);
   const logout = useAppStore(s => s.logout);
   const [mockUsers, setMockUsers] = useState<User[]>([]);
+  const [initializing, setInitializing] = useState(true);
   useEffect(() => {
     const init = async () => {
-      await api('/api/init');
-      const users = await api<User[]>('/api/users');
-      setMockUsers(users);
+      try {
+        await api('/api/init');
+        const users = await api<User[]>('/api/users');
+        setMockUsers(users);
+      } catch (e) {
+        console.error('Failed to initialize app', e);
+      } finally {
+        setInitializing(false);
+      }
     };
     init();
-  }, []);
+  }, [setCurrentUser]);
+  if (initializing) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black flex items-center justify-center">
+        <div className="text-center space-y-4 animate-bounce">
+          <Rocket className="w-16 h-16 text-kidRed mx-auto" />
+          <p className="font-black text-xl italic">TaeKwonGo is Loading...</p>
+        </div>
+      </div>
+    );
+  }
   if (!currentUser) {
     return (
       <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black p-6 flex flex-col justify-center gap-8">
@@ -33,8 +50,8 @@ export function HomePage() {
         </div>
         <div className="space-y-4">
           {mockUsers.map(u => (
-            <PlayfulCard 
-              key={u.id} 
+            <PlayfulCard
+              key={u.id}
               className="cursor-pointer hover:translate-x-1 hover:-translate-y-1 transition-transform group"
               color={u.role === 'instructor' ? 'bg-kidBlue/20' : 'bg-white'}
             >
@@ -44,8 +61,8 @@ export function HomePage() {
                   <p className="text-2xl font-black">{u.name}</p>
                   <p className="font-bold text-sm text-muted-foreground uppercase">{u.role}</p>
                 </div>
-                <PlayfulButton 
-                  variant={u.role === 'instructor' ? 'blue' : 'yellow'} 
+                <PlayfulButton
+                  variant={u.role === 'instructor' ? 'blue' : 'yellow'}
                   size="sm"
                   onClick={() => setCurrentUser(u)}
                 >
@@ -62,14 +79,14 @@ export function HomePage() {
   return (
     <div className="max-w-md mx-auto min-h-screen bg-[#F8F9FA] border-x-4 border-black flex flex-col overflow-hidden relative">
       {/* Playful Top Nav */}
-      <header className="p-4 flex items-center justify-between border-b-4 border-black bg-white sticky top-0 z-10">
+      <header className="p-4 flex items-center justify-between border-b-4 border-black bg-white sticky top-0 z-50">
         <div className="flex items-center gap-2">
           <div className="bg-kidRed p-1 rounded-lg border-2 border-black">
             <Rocket className="w-5 h-5 text-white" />
           </div>
           <span className="font-black text-xl italic tracking-tighter">TaeKwonGo</span>
         </div>
-        <button 
+        <button
           onClick={logout}
           className="p-2 hover:bg-black/5 rounded-xl transition-colors"
         >
