@@ -19,6 +19,9 @@ export interface User {
   totalSessions?: number;
   streak: number;
   badges: Badge[];
+  pinHash?: string;
+  biometricsEnabled?: boolean;
+  webAuthnCredentialId?: string;
 }
 export interface ClassSession {
   id: string;

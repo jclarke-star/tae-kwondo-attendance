@@ -5,9 +5,10 @@ interface AppState {
   currentUser: User | null;
   userRole: UserRole | null;
   isVerifiedInstructor: boolean;
+  verifiedPinHash: string | null;
   setCurrentUser: (user: User | null) => void;
   setUserRole: (role: UserRole | null) => void;
-  verifyInstructor: (pin: string) => boolean;
+  verifyInstructor: (pin: string) => Promise<boolean>;
   clearVerification: () => void;
   logout: () => void;
   restoreSession: () => Promise<boolean>;
@@ -16,11 +17,12 @@ interface AppState {
 const STORAGE_KEY = 'tkd_attendance_userid';
 const SKIN_KEY = 'tkd_attendance_skin';
 const VERIFIED_KEY = 'tkd_instructor_verified';
-const INSTRUCTOR_PIN = '1234';
+const HASH_KEY = 'tkd_instructor_hash';
 export const useAppStore = create<AppState>((set, get) => ({
   currentUser: null,
   userRole: null,
   isVerifiedInstructor: false,
+  verifiedPinHash: null,
   setCurrentUser: (user) => {
     if (user && user.id) {
       localStorage.setItem(STORAGE_KEY, user.id);
@@ -35,34 +37,48 @@ export const useAppStore = create<AppState>((set, get) => ({
     } else {
       localStorage.removeItem(SKIN_KEY);
     }
-    // Clear verification if switching away from instructor or to it fresh
     localStorage.removeItem(VERIFIED_KEY);
-    set({ userRole: role, isVerifiedInstructor: false });
+    localStorage.removeItem(HASH_KEY);
+    set({ userRole: role, isVerifiedInstructor: false, verifiedPinHash: null });
   },
-  verifyInstructor: (pin: string) => {
-    if (pin === INSTRUCTOR_PIN) {
-      localStorage.setItem(VERIFIED_KEY, 'true');
-      set({ isVerifiedInstructor: true });
-      return true;
+  verifyInstructor: async (pin: string) => {
+    const user = get().currentUser;
+    if (!user) return false;
+    try {
+      const response = await api<{ verified: boolean; hash: string }>('/api/auth/verify-pin', {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id, pin })
+      });
+      if (response.verified) {
+        localStorage.setItem(VERIFIED_KEY, 'true');
+        localStorage.setItem(HASH_KEY, response.hash);
+        set({ isVerifiedInstructor: true, verifiedPinHash: response.hash });
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
     }
-    return false;
   },
   clearVerification: () => {
     localStorage.removeItem(VERIFIED_KEY);
-    set({ isVerifiedInstructor: false });
+    localStorage.removeItem(HASH_KEY);
+    set({ isVerifiedInstructor: false, verifiedPinHash: null });
   },
   logout: () => {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(SKIN_KEY);
     localStorage.removeItem(VERIFIED_KEY);
-    set({ currentUser: null, userRole: null, isVerifiedInstructor: false });
+    localStorage.removeItem(HASH_KEY);
+    set({ currentUser: null, userRole: null, isVerifiedInstructor: false, verifiedPinHash: null });
   },
   restoreSession: async () => {
     const userId = localStorage.getItem(STORAGE_KEY);
     const skin = localStorage.getItem(SKIN_KEY) as UserRole | null;
     const verified = localStorage.getItem(VERIFIED_KEY) === 'true';
+    const hash = localStorage.getItem(HASH_KEY);
     if (skin) {
-      set({ userRole: skin, isVerifiedInstructor: verified });
+      set({ userRole: skin, isVerifiedInstructor: verified, verifiedPinHash: hash });
     }
     if (!userId) return !!skin;
     try {
@@ -71,11 +87,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         set({ currentUser: user });
         return true;
       }
-      localStorage.removeItem(STORAGE_KEY);
       return !!skin;
     } catch (e) {
-      localStorage.removeItem(STORAGE_KEY);
-      set({ currentUser: null });
       return !!skin;
     }
   },
@@ -84,12 +97,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!user?.id) return null;
     try {
       const updatedUser = await api<User>(`/api/users/${user.id}`);
-      if (JSON.stringify(updatedUser) !== JSON.stringify(user)) {
-        set({ currentUser: updatedUser });
-      }
+      set({ currentUser: updatedUser });
       return updatedUser;
     } catch (e) {
-      console.error('Failed to refresh user', e);
       return null;
     }
   }
