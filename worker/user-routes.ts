@@ -31,31 +31,22 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     const sessionId = c.req.param('id');
     const session = new ClassSessionEntity(c.env, sessionId);
     if (!await session.exists()) return notFound(c, 'class not found');
-    // 1. Approve in class session
     const updatedSession = await session.approveCheckIn(userId);
-    // 2. Update User Stats (Gamification)
     const userEnt = new UserEntity(c.env, userId);
     if (await userEnt.exists()) {
       await userEnt.mutate(u => {
         const nextTotal = (u.totalSessions || 0) + 1;
         const nextStreak = (u.streak || 0) + 1;
         const newBadges = [...(u.badges || [])];
-        // Milestone: Attendance Pro (5 sessions)
         if (nextTotal === 5 && !newBadges.find(b => b.id === 'b3')) {
           const badge = MOCK_BADGES.find(b => b.id === 'b3');
           if (badge) newBadges.push(badge);
         }
-        // Milestone: Power Kicker (10 sessions)
         if (nextTotal === 10 && !newBadges.find(b => b.id === 'b2')) {
           const badge = MOCK_BADGES.find(b => b.id === 'b2');
           if (badge) newBadges.push(badge);
         }
-        return {
-          ...u,
-          totalSessions: nextTotal,
-          streak: nextStreak,
-          badges: newBadges
-        };
+        return { ...u, totalSessions: nextTotal, streak: nextStreak, badges: newBadges };
       });
     }
     return ok(c, updatedSession);
@@ -87,5 +78,27 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     await UserEntity.ensureSeed(c.env);
     const data = await UserEntity.list(c.env);
     return ok(c, data.items);
+  });
+  app.get('/api/users/:id', async (c) => {
+    const ent = new UserEntity(c.env, c.req.param('id'));
+    if (!await ent.exists()) return notFound(c);
+    return ok(c, await ent.getState());
+  });
+  app.post('/api/users/register', async (c) => {
+    const body = await c.req.json();
+    if (!body.name || !body.belt) return bad(c, 'name and belt required');
+    const id = crypto.randomUUID();
+    const newUser = {
+      id,
+      name: body.name,
+      belt: body.belt,
+      avatar: body.avatar || '🥋',
+      role: 'student' as const,
+      streak: 0,
+      totalSessions: 0,
+      badges: []
+    };
+    await UserEntity.create(c.env, newUser);
+    return ok(c, newUser);
   });
 }
